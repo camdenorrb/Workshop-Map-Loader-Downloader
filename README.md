@@ -65,7 +65,7 @@ I've made a tutorial if you are struggling to make it work : [https://www.youtub
 
 ### CI builds
 
-This repository includes a GitHub Actions workflow (`.github/workflows/build.yml`) that compiles the plugin on every push/PR. Because the BakkesMod SDK is not publicly downloadable, generate a zip of your local SDK folder, base64-encode it, and store it in a repository secret named `BAKKESMOD_SDK_ZIP_BASE64`. The workflow restores the SDK from that secret, runs the same CMake commands as above, and publishes the built DLL as an artifact.
+The GitHub Actions workflow (`.github/workflows/build.yml`) automatically clones the public [BakkesModSDK](https://github.com/bakkesmodorg/BakkesModSDK) repository (which already exposes the required `include/` and `lib/` directories at its root) and runs the same CMake build on every push/PR. No secrets or manual SDK packaging are required anymore.
 
 ## Bugs/Issues Known
 
