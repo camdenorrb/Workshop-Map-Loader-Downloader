@@ -228,7 +228,7 @@ public:
 	void renderImageButton(ImTextureID user_texture_id, ImVec2 size, std::function<void()> function);
 	void CenterNexIMGUItItem(float itemWidth);
 	void AlignRightNexIMGUItItem(float itemWidth, float borderGap);
-	std::string LimitTextSize(std::string str, float maxTextSize); //à mettre dans utils
+	std::string LimitTextSize(std::string str, float maxTextSize); // mettre dans utils
 
 	void renderProgressBar(float value, float maxValue, ImVec2 pos, ImVec2 size, ImColor colorBackground, ImColor colorProgress, const char* label);
 
@@ -254,8 +254,8 @@ public:
 	void renderMaps_DisplayMode_0(Map map);
 	void renderMaps_DisplayMode_1(Map map, float buttonWidth);
 
-	void RLMAPS_RenderAResult(int i, ImDrawList* drawList, static char mapspath[200]);
-	void RLMAPS_renderSearchWorkshopResults(static char mapspath[200]);
+	void RLMAPS_RenderAResult(int i, ImDrawList* drawList, char mapspath[200]);
+	void RLMAPS_renderSearchWorkshopResults(char mapspath[200]);
 	
 
 	ImVec2 CalcRealTextSize(const char* text, float fontSize);

@@ -78,11 +78,6 @@ target_link_libraries(WorkshopMapLoader PRIVATE
     d3dcompiler
 )
 
-target_compile_definitions(WorkshopMapLoader PRIVATE
-    WIN32_LEAN_AND_MEAN
-    _CRT_SECURE_NO_WARNINGS
-)
-
 if(MSVC)
     add_compile_options(/MP /W3 /wd4996)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")

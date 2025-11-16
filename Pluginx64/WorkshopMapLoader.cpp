@@ -445,7 +445,7 @@ void Pluginx64::CreateUnzipBatchFile(std::string destinationPath, std::string zi
 	BatFile << "exit /b\n";
 	BatFile << "\n";
 	BatFile << ":UnZipFile <ExtractTo> <newzipfile>\n";
-	BatFile << "set vbs=\" % temp % \_.vbs\"\n";
+	BatFile << "set vbs=\" % temp % _.vbs\"\n";
 	BatFile << "if exist %vbs% del /f /q %vbs%\n";
 	BatFile << ">%vbs%  echo Set fso = CreateObject(\"Scripting.FileSystemObject\")\n";
 	BatFile << ">>%vbs% echo If NOT fso.FolderExists(%1) Then\n";
@@ -920,6 +920,8 @@ std::string Pluginx64::convertToMB(std::string numberToConvert)
 		std::string result = numberToConvert + " Bytes"; //insert a ","
 		return result;
 	}
+
+	return numberToConvert + " Bytes";
 }
 
 bool Pluginx64::Directory_Or_File_Exists(const fs::path& p, fs::file_status s)

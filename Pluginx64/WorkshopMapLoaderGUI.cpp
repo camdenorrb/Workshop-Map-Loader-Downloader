@@ -1467,7 +1467,7 @@ void Pluginx64::renderQuickSearch()
 }
 
 
-void Pluginx64::RLMAPS_renderSearchWorkshopResults(static char mapspath[200])
+void Pluginx64::RLMAPS_renderSearchWorkshopResults(char mapspath[200])
 {
 	int LinesNb = 0;
 	RLMAPS_SearchWorkshopDisplayed = 0;
@@ -1509,7 +1509,7 @@ void Pluginx64::RLMAPS_renderSearchWorkshopResults(static char mapspath[200])
 	
 }
 
-void Pluginx64::RLMAPS_RenderAResult(int i, ImDrawList* drawList, static char mapspath[200])
+void Pluginx64::RLMAPS_RenderAResult(int i, ImDrawList* drawList, char mapspath[200])
 {
 	ImGui::PushID(i);
 
