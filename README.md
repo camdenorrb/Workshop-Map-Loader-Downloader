@@ -61,11 +61,11 @@ I've made a tutorial if you are struggling to make it work : [https://www.youtub
    ```powershell
    cmake --build build --config Release
    ```
-4. The resulting `WorkshopMapLoader.dll` is written to `build/plugins`. The build automatically runs `bakkesmod-patch.exe` (shipped with the SDK) on the DLL so BakkesMod can load it. Copy the patched DLL to `BakkesMod/bakkesmod/plugins/` if you want the game to load it automatically.
+4. The resulting `WorkshopMapLoader.dll` is written to `build/plugins`. The build automatically runs `bakkesmod-patch.exe` (shipped with the SDK) on the DLL so BakkesMod can load it. Copy the patched DLL to `BakkesMod/bakkesmod/plugins/` if you want the game to load it automatically. (If you are building in an environment without a BakkesMod installation—such as CI—pass `-DBAKKESMOD_ENABLE_PATCH=OFF` and patch manually later.)
 
 ### CI builds
 
-The GitHub Actions workflow (`.github/workflows/build.yml`) automatically clones the public [BakkesModSDK](https://github.com/bakkesmodorg/BakkesModSDK) repository (which already exposes the required `include/` and `lib/` directories at its root) and runs the same CMake build on every push/PR. No secrets or manual SDK packaging are required anymore.
+The GitHub Actions workflow (`.github/workflows/build.yml`) automatically clones the public [BakkesModSDK](https://github.com/bakkesmodorg/BakkesModSDK) repository (which already exposes the required `include/` and `lib/` directories at its root) and runs the same CMake build on every push/PR. Because the runners do not have a full BakkesMod installation, the workflow configures CMake with `-DBAKKESMOD_ENABLE_PATCH=OFF` and uploads the unpatched Release DLL as an artifact; patch it locally before loading it into the game.
 
 ## Bugs/Issues Known
 

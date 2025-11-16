@@ -10,6 +10,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(BAKKESMOD_ENABLE_PATCH "Run bakkesmod-patch.exe on the built DLL" ON)
+
 set(BAKKESMOD_SDK_PATH "" CACHE PATH "Path to the bakkesmodsdk folder (contains include/ and lib/)")
 if(NOT BAKKESMOD_SDK_PATH)
     if(DEFINED ENV{BAKKESMOD_SDK_PATH})
@@ -100,12 +102,14 @@ set_target_properties(WorkshopMapLoader PROPERTIES
 )
 
 set(BAKKESMOD_PATCH_EXE "${BAKKESMOD_SDK_PATH}/bakkesmod-patch.exe" CACHE FILEPATH "Path to bakkesmod-patch.exe")
-if(EXISTS "${BAKKESMOD_PATCH_EXE}")
-    add_custom_command(TARGET WorkshopMapLoader POST_BUILD
-        COMMAND "${BAKKESMOD_PATCH_EXE}" "$<TARGET_FILE:WorkshopMapLoader>"
-        COMMENT "Patching WorkshopMapLoader with bakkesmod-patch"
-        VERBATIM
-    )
-else()
-    message(WARNING "bakkesmod-patch.exe not found at ${BAKKESMOD_PATCH_EXE}; resulting DLL will fail to load in BakkesMod.")
+if(BAKKESMOD_ENABLE_PATCH)
+    if(EXISTS "${BAKKESMOD_PATCH_EXE}")
+        add_custom_command(TARGET WorkshopMapLoader POST_BUILD
+            COMMAND "${BAKKESMOD_PATCH_EXE}" "$<TARGET_FILE:WorkshopMapLoader>"
+            COMMENT "Patching WorkshopMapLoader with bakkesmod-patch"
+            VERBATIM
+        )
+    else()
+        message(WARNING "bakkesmod-patch.exe not found at ${BAKKESMOD_PATCH_EXE}; resulting DLL will fail to load in BakkesMod.")
+    endif()
 endif()

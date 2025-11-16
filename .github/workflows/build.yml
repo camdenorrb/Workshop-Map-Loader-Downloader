@@ -27,7 +27,7 @@ jobs:
           if (-not (Test-Path $SdkPath)) {
             throw "BakkesMod SDK not found at $SdkPath"
           }
-          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DBAKKESMOD_SDK_PATH="$SdkPath"
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DBAKKESMOD_SDK_PATH="$SdkPath" -DBAKKESMOD_ENABLE_PATCH=OFF
 
       - name: Build
         shell: pwsh
