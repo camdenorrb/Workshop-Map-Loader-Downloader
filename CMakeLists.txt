@@ -26,6 +26,7 @@ if(NOT EXISTS "${BAKKESMOD_SDK_PATH}/include/bakkesmod/plugin/bakkesmodplugin.h"
 endif()
 
 set(LIBRARIES_USED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Pluginx64/LibrariesUsed")
+set(LIBRARIES_USED_LIB_DIR "${LIBRARIES_USED_DIR}/lib")
 
 set(SOURCES
     Pluginx64/pch.cpp
@@ -52,6 +53,8 @@ target_compile_definitions(WorkshopMapLoader PRIVATE
     BAKKESMODPLUGINHTTPREQUEST_EXPORTS
     _WINDOWS
     _USRDLL
+    UNICODE
+    _UNICODE
 )
 
 target_include_directories(WorkshopMapLoader PRIVATE
@@ -59,6 +62,11 @@ target_include_directories(WorkshopMapLoader PRIVATE
     Pluginx64/IMGUI
     "${LIBRARIES_USED_DIR}/include"
     "${BAKKESMOD_SDK_PATH}/include"
+)
+
+target_link_directories(WorkshopMapLoader PRIVATE
+    "${BAKKESMOD_SDK_PATH}/lib"
+    "${LIBRARIES_USED_LIB_DIR}"
 )
 
 target_link_libraries(WorkshopMapLoader PRIVATE

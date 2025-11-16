@@ -853,61 +853,54 @@ void Pluginx64::renderMaps(Gamepad controller)
 				//cvarManager->log("rectmax : " + std::to_string(buttonMap.rectMax.y));
 				buttonMap.cursorPos = ImVec2(((buttonMap.rectMax.x - buttonMap.rectMin.x) / 2) + buttonMap.rectMin.x, ((buttonMap.rectMax.y - buttonMap.rectMin.y) / 2) + buttonMap.rectMin.y);
 
-				if (buttonMap.cursorPos.y < ImGui::GetWindowDrawList()->GetClipRectMax().y && buttonMap.cursorPos.y > MapButtonChild_TopPos.y)
-				{
-					//cvarManager->log(map.mapName + " : visible");
-					buttonMap.isDisplayed = true;
-				}
-				else
-				{
-					//cvarManager->log(map.mapName + " : non visible");
-					buttonMap.isDisplayed = false;
-				}
-
+				const bool isVisible = ImGui::IsItemVisible();
+				buttonMap.isDisplayed = isVisible;
 
 				mapButtonList.push_back(buttonMap);
 
-				ImVec2 ButtonRectMin = ImGui::GetItemRectMin();
-				ImVec2 ButtonRectMax = ImGui::GetItemRectMax();
-				ImVec2 ImageMin = ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 5.f);
-				ImVec2 ImageMax = ImVec2(ImageMin.x + 190.f, ButtonRectMax.y - 5.f);
-
-
-				draw_list->AddRect(ImageMin, ImageMax, ImColor(255, 255, 255, 255), 0, 15, 2.0F);
-				if (curMap.isPreviewImageLoaded == true)
+				if (isVisible)
 				{
-					try
+					ImVec2 ButtonRectMin = buttonMap.rectMin;
+					ImVec2 ButtonRectMax = buttonMap.rectMax;
+					ImVec2 ImageMin = ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 5.f);
+					ImVec2 ImageMax = ImVec2(ImageMin.x + 190.f, ButtonRectMax.y - 5.f);
+
+					draw_list->AddRect(ImageMin, ImageMax, ImColor(255, 255, 255, 255), 0, 15, 2.0F);
+					if (curMap.isPreviewImageLoaded == true)
 					{
-						if (curMap.PreviewImage != nullptr)
+						try
 						{
-							if (curMap.PreviewImage->GetImGuiTex())
+							if (curMap.PreviewImage != nullptr)
 							{
-								draw_list->AddImage(curMap.PreviewImage->GetImGuiTex(), ImageMin, ImageMax); //Map image preview
+								if (curMap.PreviewImage->GetImGuiTex())
+								{
+									draw_list->AddImage(curMap.PreviewImage->GetImGuiTex(), ImageMin, ImageMax); //Map image preview
+								}
 							}
 						}
+						catch (const std::exception& ex)
+						{
+							cvarManager->log(ex.what());
+						}
 					}
-					catch (const std::exception& ex)
+
+					std::string mapName;
+					if (curMap.JsonFile == "NoInfos")
 					{
-						cvarManager->log(ex.what());
+						mapName = replace(curMap.Folder.filename().string(), *"_", *" ");
 					}
+					else
+					{
+						mapName = curMap.mapName;
+					}
+
+
+					draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 2.f), ImColor(255, 255, 255, 255),
+						mapName.c_str());
+
+					draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 40.f), ImColor(255, 0, 0, 255),
+						"This map wont work because the map isn't extracted, click to fix.");
 				}
-
-				std::string mapName;
-				if (curMap.JsonFile == "NoInfos")
-				{
-					mapName = replace(curMap.Folder.filename().string(), *"_", *" ");
-				}
-				else
-				{
-					mapName = curMap.mapName;
-				}
-
-
-				draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 2.f), ImColor(255, 255, 255, 255),
-					mapName.c_str());
-
-				draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 40.f), ImColor(255, 0, 0, 255),
-					"This map wont work because the map isn't extracted, click to fix.");
 
 				ImGui::EndGroup();
 
@@ -1209,94 +1202,64 @@ void Pluginx64::renderMaps_DisplayMode_0(Map map)
 		//cvarManager->log("rectmax : " + std::to_string(buttonMap.rectMax.y));
 		buttonMap.cursorPos = ImVec2(((buttonMap.rectMax.x - buttonMap.rectMin.x) / 2) + buttonMap.rectMin.x, ((buttonMap.rectMax.y - buttonMap.rectMin.y) / 2) + buttonMap.rectMin.y);
 
-		if (buttonMap.cursorPos.y < ImGui::GetWindowDrawList()->GetClipRectMax().y && buttonMap.cursorPos.y > MapButtonChild_TopPos.y)
-		{
-			//cvarManager->log(map.mapName + " : visible");
-			buttonMap.isDisplayed = true;
-		}
-		else
-		{
-			//cvarManager->log(map.mapName + " : non visible");
-			buttonMap.isDisplayed = false;
-		}
+		const bool isVisible = ImGui::IsItemVisible();
+		buttonMap.isDisplayed = isVisible;
 
 
 		mapButtonList.push_back(buttonMap);
 
-		ImVec2 ButtonRectMin = ImGui::GetItemRectMin();
-		ImVec2 ButtonRectMax = ImGui::GetItemRectMax();
-		ImVec2 ImageMin = ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 5.f);
-		ImVec2 ImageMax = ImVec2(ImageMin.x + 190.f, ButtonRectMax.y - 5.f);
-
-
-
-		draw_list->AddRect(ImageMin, ImageMax, ImColor(255, 255, 255, 255), 0, 15, 2.0F);
-		if (map.isPreviewImageLoaded == true)
+		if (isVisible)
 		{
-			try
+			ImVec2 ButtonRectMin = buttonMap.rectMin;
+			ImVec2 ButtonRectMax = buttonMap.rectMax;
+			ImVec2 ImageMin = ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 5.f);
+			ImVec2 ImageMax = ImVec2(ImageMin.x + 190.f, ButtonRectMax.y - 5.f);
+
+			draw_list->AddRect(ImageMin, ImageMax, ImColor(255, 255, 255, 255), 0, 15, 2.0F);
+			if (map.isPreviewImageLoaded == true)
 			{
-				if (map.PreviewImage != nullptr)
+				try
 				{
-					if (map.PreviewImage->GetImGuiTex())
+					if (map.PreviewImage != nullptr)
 					{
-						draw_list->AddImage(map.PreviewImage->GetImGuiTex(), ImageMin, ImageMax); //Map image preview
+						if (map.PreviewImage->GetImGuiTex())
+						{
+							draw_list->AddImage(map.PreviewImage->GetImGuiTex(), ImageMin, ImageMax); //Map image preview
+						}
 					}
 				}
-			}
-			catch (const std::exception& ex)
-			{
-				cvarManager->log(ex.what());
-			}
-		}
-
-		if (map.JsonFile == "NoInfos")
-		{
-			draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 10.f), ImColor(255, 255, 255, 255),
-				replace(map.Folder.filename().string(), *"_", *" ").c_str());
-		}
-		else
-		{
-			
-			std::string GoodDescription = map.mapDescription;
-			if (map.mapDescription.length() > 150)
-			{
-				GoodDescription.insert(145, "\n");
-
-				if (map.mapDescription.length() > 280)
+				catch (const std::exception& ex)
 				{
-					GoodDescription.erase(280);
-					GoodDescription.append("...");
+					cvarManager->log(ex.what());
 				}
 			}
-			
 
-			//responsive description but it takes too much ressources and causes fps issues for not good PC (like my PC xD)
-			/*
-			float descriptionWidth = ((windowWidth - 214) * 0.867f);
-			std::string mapDescription = GetJSONLocalMapInfos(map.JsonFile).at(1);
-			std::vector<std::string> mapDescriptionParts;
-			if (ImGui::CalcTextSize(mapDescription.c_str()).x > descriptionWidth)
+			if (map.JsonFile == "NoInfos")
 			{
-				mapDescriptionParts.push_back(LimitTextSize(mapDescription, descriptionWidth)); //first line of the description
-				mapDescription.erase(mapDescription.find(mapDescriptionParts.at(0)), mapDescriptionParts.at(0).length()); //remove the first line in description
-				mapDescriptionParts.push_back(LimitTextSize(mapDescription, descriptionWidth)); //second line of the description
-
-				if (mapDescription.length() > mapDescriptionParts.at(1).length())
-				{
-					mapDescription = mapDescriptionParts.at(0) + "\n" + mapDescriptionParts.at(1) + "...";
-				}
-				else
-				{
-					mapDescription = mapDescriptionParts.at(0) + "\n" + mapDescriptionParts.at(1);
-				}
+				draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 10.f), ImColor(255, 255, 255, 255),
+					replace(map.Folder.filename().string(), *"_", *" ").c_str());
 			}
-			*/
+			else
+			{
 
-			draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 2.f), ImColor(255, 255, 255, 255),
-				map.mapName.c_str()); //Map title
-			draw_list->AddText(fontA, 15.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 40.f), ImColor(200, 200, 200, 255), GoodDescription.c_str()); //Map Description
-			draw_list->AddText(fontA, 15.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 90.f), ImColor(0, 200, 255, 255),
-				std::string(ResultByText.c_str() + map.mapAuthor).c_str()); // "By " Map Author
+				std::string GoodDescription = map.mapDescription;
+				if (map.mapDescription.length() > 150)
+				{
+					GoodDescription.insert(145, "\n");
+
+					if (map.mapDescription.length() > 280)
+					{
+						GoodDescription.erase(280);
+						GoodDescription.append("...");
+					}
+				}
+
+				draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 2.f), ImColor(255, 255, 255, 255),
+					map.mapName.c_str()); //Map title
+				draw_list->AddText(fontA, 15.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 40.f), ImColor(200, 200, 200, 255), GoodDescription.c_str()); //Map Description
+				draw_list->AddText(fontA, 15.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 90.f), ImColor(0, 200, 255, 255),
+					std::string(ResultByText.c_str() + map.mapAuthor).c_str()); // "By " Map Author
+			}
 		}
 
 		ImGui::EndGroup();
@@ -1344,66 +1307,57 @@ void Pluginx64::renderMaps_DisplayMode_1(Map map, float buttonWidth)
 		//cvarManager->log("rectmax : " + std::to_string(buttonMap.rectMax.y));
 		buttonMap.cursorPos = ImVec2(((buttonMap.rectMax.x - buttonMap.rectMin.x) / 2) + buttonMap.rectMin.x, ((buttonMap.rectMax.y - buttonMap.rectMin.y) / 2) + buttonMap.rectMin.y);
 
-		if (buttonMap.cursorPos.y < ImGui::GetWindowDrawList()->GetClipRectMax().y && buttonMap.cursorPos.y > MapButtonChild_TopPos.y)
-		{
-			//cvarManager->log(map.mapName + " : visible");
-			buttonMap.isDisplayed = true;
-		}
-		else
-		{
-			//cvarManager->log(map.mapName + " : non visible");
-			buttonMap.isDisplayed = false;
-		}
+		const bool isVisible = ImGui::IsItemVisible();
+		buttonMap.isDisplayed = isVisible;
 
 
 		mapButtonList.push_back(buttonMap);
 
-
-		ImVec2 ButtonRectMin = ImGui::GetItemRectMin();
-		ImVec2 ButtonRectMax = ImGui::GetItemRectMax();
-		ImVec2 ImageMin = ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 29.f);
-		ImVec2 ImageMax = ImVec2(ButtonRectMax.x - 5.f, ButtonRectMax.y - 5.f);
-
-
-		draw_list->AddRect(ImageMin, ImageMax, ImColor(255, 255, 255, 255), 0, 15, 2.0F);
-		if (map.isPreviewImageLoaded == true)
+		if (isVisible)
 		{
-			try
+			ImVec2 ButtonRectMin = buttonMap.rectMin;
+			ImVec2 ButtonRectMax = buttonMap.rectMax;
+			ImVec2 ImageMin = ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 29.f);
+			ImVec2 ImageMax = ImVec2(ButtonRectMax.x - 5.f, ButtonRectMax.y - 5.f);
+
+			draw_list->AddRect(ImageMin, ImageMax, ImColor(255, 255, 255, 255), 0, 15, 2.0F);
+			if (map.isPreviewImageLoaded == true)
 			{
-				if (map.PreviewImage != nullptr)
+				try
 				{
-					if (map.PreviewImage->GetImGuiTex())
+					if (map.PreviewImage != nullptr)
 					{
-						draw_list->AddImage(map.PreviewImage->GetImGuiTex(), ImageMin, ImageMax); //Map image preview
+						if (map.PreviewImage->GetImGuiTex())
+						{
+							draw_list->AddImage(map.PreviewImage->GetImGuiTex(), ImageMin, ImageMax); //Map image preview
+						}
 					}
 				}
+				catch (const std::exception& ex)
+				{
+					cvarManager->log(ex.what());
+				}
 			}
-			catch (const std::exception& ex)
+
+			ImFont* fontA = ImGui::GetDefaultFont();
+
+			std::string mapTitle;
+			if (map.JsonFile == "NoInfos")
 			{
-				cvarManager->log(ex.what());
+				mapTitle = replace(map.Folder.filename().string(), *"_", *" ");
 			}
+			else
+			{
+				mapTitle = map.mapName;
+			}
+
+			if (ImGui::CalcTextSize(mapTitle.c_str()).x > (buttonWidth * 0.808f))
+			{
+				mapTitle = LimitTextSize(mapTitle, (buttonWidth * 0.808f) - ImGui::CalcTextSize("...").x) + "...";
+			}
+
+			draw_list->AddText(fontA, 15.5f, ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 6.f), ImColor(255, 255, 255, 255), mapTitle.c_str()); //Map title
 		}
-
-		ImFont* fontA = ImGui::GetDefaultFont();
-
-
-
-		std::string mapTitle;
-		if (map.JsonFile == "NoInfos")
-		{
-			mapTitle = replace(map.Folder.filename().string(), *"_", *" ");
-		}
-		else
-		{
-			mapTitle = map.mapName;
-		}
-
-		if (ImGui::CalcTextSize(mapTitle.c_str()).x > (buttonWidth * 0.808f))
-		{
-			mapTitle = LimitTextSize(mapTitle, (buttonWidth * 0.808f) - ImGui::CalcTextSize("...").x) + "...";
-		}
-
-		draw_list->AddText(fontA, 15.5f, ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 6.f), ImColor(255, 255, 255, 255), mapTitle.c_str()); //Map title
 
 
 
@@ -1532,24 +1486,28 @@ void Pluginx64::RLMAPS_RenderAResult(int i, ImDrawList* drawList, char mapspath[
 			ImVec2 ImageP_Min = ImVec2(TopCornerLeft.x + 6.f, TopCornerLeft.y + 6.f);
 			ImVec2 ImageP_Max = ImVec2(TopCornerLeft.x + 184.f, TopCornerLeft.y + 179.f);
 
-			drawList->AddRectFilled(TopCornerLeft, RectFilled_p_max, ImColor(44, 75, 113, 255), 5.f, 15); //Blue rectangle
-			drawList->AddRect(ImageP_Min, ImageP_Max, ImColor(255, 255, 255, 255), 0, 15, 2.0F); //Image white outline
-
-			if (mapResult.isImageLoaded == true)
+			const bool isVisible = ImGui::IsRectVisible(TopCornerLeft, RectFilled_p_max);
+			if (isVisible)
 			{
-				try
+				drawList->AddRectFilled(TopCornerLeft, RectFilled_p_max, ImColor(44, 75, 113, 255), 5.f, 15); //Blue rectangle
+				drawList->AddRect(ImageP_Min, ImageP_Max, ImColor(255, 255, 255, 255), 0, 15, 2.0F); //Image white outline
+
+				if (mapResult.isImageLoaded == true)
 				{
-					if (mapResult.Image != nullptr)
+					try
 					{
-						if (mapResult.Image->GetImGuiTex())
+						if (mapResult.Image != nullptr)
 						{
-							drawList->AddImage(mapResult.Image->GetImGuiTex(), ImageP_Min, ImageP_Max); //Map image preview
+							if (mapResult.Image->GetImGuiTex())
+							{
+								drawList->AddImage(mapResult.Image->GetImGuiTex(), ImageP_Min, ImageP_Max); //Map image preview
+							}
 						}
 					}
-				}
-				catch (const std::exception& ex)
-				{
-					//cvarManager->log(ex.what());
+					catch (const std::exception& ex)
+					{
+						//cvarManager->log(ex.what());
+					}
 				}
 			}
 
@@ -1565,10 +1523,12 @@ void Pluginx64::RLMAPS_RenderAResult(int i, ImDrawList* drawList, char mapspath[
 			{
 				GoodMapName = LimitTextSize(GoodMapName, (186.f * 0.982f) - ImGui::CalcTextSize("...").x) + "...";
 			}
-			drawList->AddText(ImVec2(TopCornerLeft.x + 4.f, TopCornerLeft.y + 185.f), ImColor(255, 255, 255, 255), GoodMapName.c_str()); //Map title
-			//drawList->AddText(ImVec2(TopCornerLeft.x + 4.f, TopCornerLeft.y + 200.f), ImColor(255, 255, 255, 255), SizeConverted.c_str()); //Map size
-			drawList->AddText(ImVec2(TopCornerLeft.x + 4.f, TopCornerLeft.y + 215.f), ImColor(255, 255, 255, 255),
-				std::string(ResultByText.c_str() + mapAuthor).c_str()); // "By : " Map Author
+			if (isVisible)
+			{
+				drawList->AddText(ImVec2(TopCornerLeft.x + 4.f, TopCornerLeft.y + 185.f), ImColor(255, 255, 255, 255), GoodMapName.c_str()); //Map title
+				drawList->AddText(ImVec2(TopCornerLeft.x + 4.f, TopCornerLeft.y + 215.f), ImColor(255, 255, 255, 255),
+					std::string(ResultByText.c_str() + mapAuthor).c_str()); // "By : " Map Author
+			}
 			ImGui::SetCursorScreenPos(ImVec2(TopCornerLeft.x + 4.f, TopCornerLeft.y + 235.f));
 			if (ImGui::Button(DownloadMapButtonText.c_str(), ImVec2(182, 20))) // "Download Map"																								//Map download button
 			{
