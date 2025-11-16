@@ -443,7 +443,7 @@ void Pluginx64::Render()
 				std::wstring w_modsDir = s2ws(RLCookedPCConsole_Path.string());
 				LPCWSTR L_modsDir = w_modsDir.c_str();
 
-				ShellExecute(NULL, L"open", L_modsDir, NULL, NULL, SW_SHOWDEFAULT);
+				ShellExecuteW(NULL, L"open", L_modsDir, NULL, NULL, SW_SHOWDEFAULT);
 			}
 
 			ImGui::Separator();
@@ -918,7 +918,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 						std::wstring w_CurrentMapsDir = s2ws(curMap.Folder.string());
 						LPCWSTR L_CurrentMapsDir = w_CurrentMapsDir.c_str();
 
-						ShellExecute(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT);
+					ShellExecuteW(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT);
 					}
 
 					if (ImGui::Selectable(DeleteMapText.c_str())) // "Delete Map"
@@ -1308,7 +1308,7 @@ void Pluginx64::renderMaps_DisplayMode_0(Map map)
 				std::wstring w_CurrentMapsDir = s2ws(map.Folder.string());
 				LPCWSTR L_CurrentMapsDir = w_CurrentMapsDir.c_str();
 
-				ShellExecute(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT);
+					ShellExecuteW(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT);
 			}
 
 			if (ImGui::Selectable(DeleteMapText.c_str())) // "Delete Map"
@@ -1416,7 +1416,7 @@ void Pluginx64::renderMaps_DisplayMode_1(Map map, float buttonWidth)
 				std::wstring w_CurrentMapsDir = s2ws(map.Folder.string());
 				LPCWSTR L_CurrentMapsDir = w_CurrentMapsDir.c_str();
 
-				ShellExecute(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT);
+					ShellExecuteW(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT);
 			}
 
 			if (ImGui::Selectable(DeleteMapText.c_str())) // "Delete Map"
@@ -1663,7 +1663,7 @@ void Pluginx64::renderLink(std::string link)
 		ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 		if (ImGui::IsMouseClicked(0))
 		{
-			ShellExecute(0, 0, L_LINK, 0, 0, SW_SHOW); //open link in web browser
+			ShellExecuteW(0, 0, L_LINK, 0, 0, SW_SHOW); //open link in web browser
 		}
 		renderUnderLine(ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
 	}
@@ -1781,7 +1781,7 @@ void Pluginx64::renderExtractMapFilesPopup(Map curMap)
 			{
 				std::wstring w_CurrentMapsDir = s2ws(curMap.Folder.string());
 				LPCWSTR L_CurrentMapsDir = w_CurrentMapsDir.c_str();
-				ShellExecute(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT); //open the map directory in file explorer
+				ShellExecuteW(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT); //open the map directory in file explorer
 			}
 			ImGui::SameLine();
 			if (ImGui::Button(CancelText.c_str(), ImVec2(100.f, 25.f)))
