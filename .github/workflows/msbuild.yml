@@ -58,7 +58,8 @@ jobs:
             /p:BakkesModPath="$SdkPath" `
             /p:OutDir="$OutDir" `
             /p:IntDir="$IntDir" `
-            /p:TrackFileAccess=false
+            /p:TrackFileAccess=false `
+            /p:PostBuildEventUseInBuild=false
 
       - name: Upload plugin
         uses: actions/upload-artifact@v4
