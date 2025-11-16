@@ -1,0 +1,47 @@
+name: Build plugin
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Restore BakkesMod SDK
+        shell: pwsh
+        run: |
+          if (-not "${{ secrets.BAKKESMOD_SDK_ZIP_BASE64 }}") {
+            throw "Set the repository secret BAKKESMOD_SDK_ZIP_BASE64 to a base64-encoded BakkesMod SDK zip."
+          }
+          $zipPath = "$env:RUNNER_TEMP\bakkesmodsdk.zip"
+          [IO.File]::WriteAllBytes($zipPath, [System.Convert]::FromBase64String("${{ secrets.BAKKESMOD_SDK_ZIP_BASE64 }}"))
+          $extractRoot = Join-Path $env:GITHUB_WORKSPACE "deps"
+          New-Item -ItemType Directory -Force -Path $extractRoot | Out-Null
+          Expand-Archive -Path $zipPath -DestinationPath $extractRoot -Force
+          $sdkFolder = Get-ChildItem $extractRoot | Where-Object { $_.PSIsContainer } | Select-Object -First 1
+          if (-not $sdkFolder) {
+            throw "Could not locate extracted BakkesMod SDK folder."
+          }
+          "BAKKESMOD_SDK_PATH=$($sdkFolder.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DBAKKESMOD_SDK_PATH="$env:BAKKESMOD_SDK_PATH"
+
+      - name: Build
+        shell: pwsh
+        run: |
+          cmake --build build --config Release
+
+      - name: Upload plugin
+        uses: actions/upload-artifact@v3
+        with:
+          name: WorkshopMapLoader
+          path: build/plugins/*.dll

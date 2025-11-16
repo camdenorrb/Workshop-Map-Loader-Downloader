@@ -50,6 +50,22 @@ You have to :
 
 I've made a tutorial if you are struggling to make it work : [https://www.youtube.com/watch?v=mI2PqkissiQ](https://www.youtube.com/watch?v=mI2PqkissiQ)
 
+## Building with CMake
+
+1. Install the BakkesMod SDK and note the directory that contains the `bakkesmodsdk/include` and `bakkesmodsdk/lib` folders. Export it via `setx BAKKESMOD_SDK_PATH "C:\path\to\bakkesmodsdk"` or pass it to CMake with `-DBAKKESMOD_SDK_PATH=...`.
+2. From a "x64 Native Tools" developer prompt generate the build files (Visual Studio 2022 in this example):
+   ```powershell
+   cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+   ```
+3. Build the Release configuration (BakkesMod loads Release DLLs):
+   ```powershell
+   cmake --build build --config Release
+   ```
+4. The resulting `WorkshopMapLoader.dll` is written to `build/plugins`. Copy it to `BakkesMod/bakkesmod/plugins/` if you want the game to load it automatically.
+
+### CI builds
+
+This repository includes a GitHub Actions workflow (`.github/workflows/build.yml`) that compiles the plugin on every push/PR. Because the BakkesMod SDK is not publicly downloadable, generate a zip of your local SDK folder, base64-encode it, and store it in a repository secret named `BAKKESMOD_SDK_ZIP_BASE64`. The workflow restores the SDK from that secret, runs the same CMake commands as above, and publishes the built DLL as an artifact.
 
 ## Bugs/Issues Known
 
