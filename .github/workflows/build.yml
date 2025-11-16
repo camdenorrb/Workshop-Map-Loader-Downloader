@@ -1,4 +1,4 @@
-name: Build plugin
+Hename: Build plugin (CMake)
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
 
 jobs:
   build:
+    if: ${{ false }}
     runs-on: windows-latest
 
     steps:
@@ -39,3 +40,7 @@ jobs:
         with:
           name: WorkshopMapLoader
           path: build/plugins/Release/*.dll
+
+concurrency:
+  group: cmake-build
+  cancel-in-progress: false

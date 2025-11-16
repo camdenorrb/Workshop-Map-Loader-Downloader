@@ -61,17 +61,8 @@ target_include_directories(WorkshopMapLoader PRIVATE
     "${BAKKESMOD_SDK_PATH}/include"
 )
 
-target_link_directories(WorkshopMapLoader PRIVATE
-    "${LIBRARIES_USED_DIR}/lib"
-    "${BAKKESMOD_SDK_PATH}/lib"
-)
-
 target_link_libraries(WorkshopMapLoader PRIVATE
     pluginsdk
-    cpr
-    jsoncpp
-    libcurl
-    zlib
     urlmon
     Ws2_32
     Crypt32

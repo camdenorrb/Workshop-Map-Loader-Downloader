@@ -1,0 +1,49 @@
+name: Build plugin (MSBuild)
+
+on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      CONFIGURATION: Release
+      PLATFORM: x64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout BakkesMod SDK
+        uses: actions/checkout@v4
+        with:
+          repository: bakkesmodorg/BakkesModSDK
+          ref: master
+          path: deps/BakkesModSDK
+
+      - name: Build with MSBuild
+        shell: pwsh
+        run: |
+          $SdkPath = Join-Path $env:GITHUB_WORKSPACE "deps\BakkesModSDK"
+          if (-not (Test-Path $SdkPath)) {
+            throw "BakkesMod SDK not found at $SdkPath"
+          }
+          $OutDir = Join-Path $env:GITHUB_WORKSPACE "build\plugins\"
+          $IntDir = Join-Path $env:GITHUB_WORKSPACE "build\.intermediates\$env:CONFIGURATION\"
+          msbuild Pluginx64/Pluginx64.vcxproj `
+            /t:Build `
+            /p:Configuration=$env:CONFIGURATION `
+            /p:Platform=$env:PLATFORM `
+            /p:BakkesModPath="$SdkPath" `
+            /p:OutDir="$OutDir" `
+            /p:IntDir="$IntDir" `
+            /p:TrackFileAccess=false
+
+      - name: Upload plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: WorkshopMapLoader-msbuild
+          path: build/plugins/*.dll
