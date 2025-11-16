@@ -80,7 +80,8 @@ target_link_libraries(WorkshopMapLoader PRIVATE
 
 if(MSVC)
     add_compile_options(/MP /W3 /wd4996)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    set_property(TARGET WorkshopMapLoader PROPERTY
+        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
 target_precompile_headers(WorkshopMapLoader PRIVATE Pluginx64/pch.h)
