@@ -21,15 +21,6 @@ float windowSizeYBefore = ImGui::GetWindowSize().y;
 
 void Pluginx64::Render()
 {
-	HANDLE clip; //ClipBoard to copy and paste
-	if (OpenClipboard(NULL))
-	{
-		clip = GetClipboardData(CF_TEXT);
-		CloseClipboard();
-	}
-
-
-
 	ImGui::SetNextWindowSizeConstraints(ImVec2(1326.f, 690.f), ImVec2(1920.f, 1080.f));
 
 	if (!ImGui::Begin(menuTitle_.c_str(), &isWindowOpen_, ImGuiWindowFlags_MenuBar))
@@ -797,20 +788,34 @@ void Pluginx64::renderMaps(Gamepad controller)
 {
 	mapButtonList.clear();
 
-	std::vector<Map> NoUpk_MapList;
-	std::vector<Map> Good_MapList;
+	std::vector<Map*> NoUpk_MapList;
+	std::vector<Map*> Good_MapList;
+	NoUpk_MapList.reserve(MapList.size());
+	Good_MapList.reserve(MapList.size());
+
+	for (auto& map : MapList)
+	{
+		if (map.UpkFile == "NoUpkFound" && map.ZipFile != "EmptyFolder" && map.ZipFile != "NoZipFound")
+		{
+			NoUpk_MapList.push_back(&map);
+		}
+
+		if (map.UpkFile != "NoUpkFound" && map.UpkFile != "EmptyFolder")
+		{
+			Good_MapList.push_back(&map);
+		}
+	}
+
+	const std::string quickSearchQuery = std::string(QuickSearch_KeyWordBuf);
+	if (quickSearchQuery != QuickSearch_LastQuery)
+	{
+		UpdateQuickSearchResults(quickSearchQuery);
+	}
+	const bool usingQuickSearch = !quickSearchQuery.empty();
+	const std::vector<Map*>& ActiveMapList = usingQuickSearch ? QuickSearch_Results : Good_MapList;
 
 	int ID = 0;
 
-	/*
-	ImGui::Text("window width : %f", ImGui::GetWindowWidth());
-	ImGui::Separator();
-
-	ImGui::SliderInt("width", &widthTest, -100, 1920);
-	ImGui::SliderInt("height", &heightTest, -100, 500);
-	ImGui::SliderFloat("fontsize", &fontSizeTest, 0.f, 1.f);
-	*/
-	
 	MapButtonChild_TopPos = ImGui::GetCursorScreenPos();
 	if (ImGui::BeginChild("#MapsLauncherButtons"))
 	{
@@ -818,20 +823,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 		float buttonWidth = (windowWidth - ((nbTilesPerLine - 1) * 8)) / nbTilesPerLine;
 		int nbTilesOnTheCurrentLine = 0;
 
-		for (auto map : MapList)
-		{
-			if (map.UpkFile == "NoUpkFound" && map.ZipFile != "EmptyFolder" && map.ZipFile != "NoZipFound")
-			{
-				NoUpk_MapList.push_back(map);
-			}
-
-			if (map.UpkFile != "NoUpkFound" && map.UpkFile != "EmptyFolder")
-			{
-				Good_MapList.push_back(map);
-			}
-		}
-
-		for (auto curMap : NoUpk_MapList)
+		for (auto* curMap : NoUpk_MapList)
 		{
 			ImGui::PushID(ID); //needed to make the button work
 			ImGui::BeginGroup();
@@ -844,7 +836,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 				{
 					ImGui::OpenPopup("ExtractMapFiles");
 				}
-				renderExtractMapFilesPopup(curMap);
+				renderExtractMapFilesPopup(*curMap);
 
 				mapButtonPos buttonMap;
 				buttonMap.rectMin = ImGui::GetItemRectMin();
@@ -866,15 +858,15 @@ void Pluginx64::renderMaps(Gamepad controller)
 					ImVec2 ImageMax = ImVec2(ImageMin.x + 190.f, ButtonRectMax.y - 5.f);
 
 					draw_list->AddRect(ImageMin, ImageMax, ImColor(255, 255, 255, 255), 0, 15, 2.0F);
-					if (curMap.isPreviewImageLoaded == true)
+					if (curMap->isPreviewImageLoaded == true)
 					{
 						try
 						{
-							if (curMap.PreviewImage != nullptr)
+							if (curMap->PreviewImage != nullptr)
 							{
-								if (curMap.PreviewImage->GetImGuiTex())
+								if (curMap->PreviewImage->GetImGuiTex())
 								{
-									draw_list->AddImage(curMap.PreviewImage->GetImGuiTex(), ImageMin, ImageMax); //Map image preview
+									draw_list->AddImage(curMap->PreviewImage->GetImGuiTex(), ImageMin, ImageMax); //Map image preview
 								}
 							}
 						}
@@ -885,13 +877,13 @@ void Pluginx64::renderMaps(Gamepad controller)
 					}
 
 					std::string mapName;
-					if (curMap.JsonFile == "NoInfos")
+					if (curMap->JsonFile == "NoInfos")
 					{
-						mapName = replace(curMap.Folder.filename().string(), *"_", *" ");
+						mapName = replace(curMap->Folder.filename().string(), *"_", *" ");
 					}
 					else
 					{
-						mapName = curMap.mapName;
+						mapName = curMap->mapName;
 					}
 
 
@@ -908,7 +900,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 				{
 					if (ImGui::Selectable(OpenMapDirText.c_str())) // "Open map directory"
 					{
-						std::wstring w_CurrentMapsDir = s2ws(curMap.Folder.string());
+						std::wstring w_CurrentMapsDir = s2ws(curMap->Folder.string());
 						LPCWSTR L_CurrentMapsDir = w_CurrentMapsDir.c_str();
 
 					ShellExecuteW(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT);
@@ -916,8 +908,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 
 					if (ImGui::Selectable(DeleteMapText.c_str())) // "Delete Map"
 					{
-						MapList.clear();
-						fs::remove_all(curMap.Folder);
+						fs::remove_all(curMap->Folder);
 						RefreshMapsFunct(MapsFolderPathBuf);
 					}
 					ImGui::EndPopup();
@@ -928,24 +919,15 @@ void Pluginx64::renderMaps(Gamepad controller)
 		}
 
 		std::vector<bool> isHoveringMapButtonList;
+		isHoveringMapButtonList.reserve(ActiveMapList.size());
 
-		if (std::string(QuickSearch_KeyWordBuf) != "") //if there is something to find
-		{
-			Good_MapList = QuickSearch_GetMapList(std::string(QuickSearch_KeyWordBuf));
-			QuickSearch_Searching = true;
-		}
-		else
-		{
-			QuickSearch_Searching = false;
-		}
-
-		for (auto curMap : Good_MapList)
+		for (auto* curMap : ActiveMapList)
 		{
 			ImGui::PushID(ID); //needed to make the button work
 
 			if (MapsDisplayMode == 0)
 			{
-				renderMaps_DisplayMode_0(curMap);
+				renderMaps_DisplayMode_0(*curMap);
 
 				/*
 				//not working well
@@ -979,7 +961,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 			}
 			else
 			{
-				renderMaps_DisplayMode_1(curMap, buttonWidth);
+				renderMaps_DisplayMode_1(*curMap, buttonWidth);
 				nbTilesOnTheCurrentLine++;
 				ImGui::PopID();
 				ID++;
@@ -1174,16 +1156,13 @@ void Pluginx64::renderMaps(Gamepad controller)
 	ImGui::EndChild();
 }
 
-void Pluginx64::renderMaps_DisplayMode_0(Map map)
+void Pluginx64::renderMaps_DisplayMode_0(const Map& map)
 {
 	ImGui::BeginGroup();
 	{
 		ImDrawList* draw_list = ImGui::GetWindowDrawList();
 		ImFont* fontA = ImGui::GetDefaultFont();
 
-		float windowWidth = ImGui::GetContentRegionAvailWidth();
-
-		
 		if (ImGui::Button("##map", ImVec2(ImGui::GetWindowWidth(), 120)))
 		{
 			gameWrapper->Execute([&, map](GameWrapper* gw)
@@ -1284,7 +1263,7 @@ void Pluginx64::renderMaps_DisplayMode_0(Map map)
 	}
 }
 
-void Pluginx64::renderMaps_DisplayMode_1(Map map, float buttonWidth)
+void Pluginx64::renderMaps_DisplayMode_1(const Map& map, float buttonWidth)
 {
 	ImGui::BeginGroup();
 	{
@@ -1699,7 +1678,7 @@ void Pluginx64::renderAcceptDownload()
 }
 
 
-void Pluginx64::renderExtractMapFilesPopup(Map curMap)
+void Pluginx64::renderExtractMapFilesPopup(const Map& curMap)
 {
 	if (ImGui::BeginPopupModal("ExtractMapFiles", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{

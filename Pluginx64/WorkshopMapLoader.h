@@ -212,7 +212,10 @@ public:
 	bool isQuickSearchDisplayed = false;
 	bool QuickSearch_Searching = false;
 	char QuickSearch_KeyWordBuf[128];
-	std::vector<Map> QuickSearch_GetMapList(std::string keyWord);
+	std::vector<Map*> QuickSearch_GetMapList(const std::string& keyWord);
+	void UpdateQuickSearchResults(const std::string& keyWord);
+	std::vector<Map*> QuickSearch_Results;
+	std::string QuickSearch_LastQuery;
 
 	void Render() override;
 	std::string GetMenuName() override;
@@ -238,7 +241,7 @@ public:
 	void renderInfoPopup(const char* popupName, const char* label);
 	void renderYesNoPopup(const char* popupName, const char* label, std::function<void()> yesFunc, std::function<void()> noFunc);
 	void renderFolderErrorPopup();
-	void renderExtractMapFilesPopup(Map curMap);
+	void renderExtractMapFilesPopup(const Map& curMap);
 	void renderAcceptDownload();
 	void renderDownloadFailedPopup();
 	void renderDownloadTexturesPopup(std::vector<std::string> missingTextureFiles);
@@ -251,8 +254,8 @@ public:
 
 
 	void renderMaps(Gamepad controller);
-	void renderMaps_DisplayMode_0(Map map);
-	void renderMaps_DisplayMode_1(Map map, float buttonWidth);
+	void renderMaps_DisplayMode_0(const Map& map);
+	void renderMaps_DisplayMode_1(const Map& map, float buttonWidth);
 
 	void RLMAPS_RenderAResult(int i, ImDrawList* drawList, char mapspath[200]);
 	void RLMAPS_renderSearchWorkshopResults(char mapspath[200]);

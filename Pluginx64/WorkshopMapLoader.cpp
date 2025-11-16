@@ -200,6 +200,9 @@ void Pluginx64::RefreshMapsFunct(std::string mapsfolders)
 {
 	MapList.clear();
 	selectedButton = 0;
+	QuickSearch_LastQuery.clear();
+	QuickSearch_Results.clear();
+	QuickSearch_Searching = false;
 
 	std::vector<std::filesystem::path> MapsDirectories;
 
@@ -493,19 +496,10 @@ void Pluginx64::GetResults(std::string keyWord, int IndexPage)
 	RLMAPS_NumberOfMapsFound = maps.size();
 
 
+	RLMAPS_MapResultList.reserve(maps.size());
 	for (int index = 0; index < maps.size(); ++index)
 	{
-		//GetMapResult(maps, index);
-		std::thread t2(&Pluginx64::GetMapResult, this, maps, index);
-		t2.detach();
-
-
-		Sleep(100);
-	}
-
-	while (RLMAPS_MapResultList.size() != maps.size())
-	{
-		Sleep(10);
+		GetMapResult(maps, index);
 	}
 
 	RLMAPS_Searching = false;
@@ -634,19 +628,33 @@ void Pluginx64::GetMapSize(std::string donwloadUrl)
 
 
 //Quick search ctrl+f
-std::vector<Map> Pluginx64::QuickSearch_GetMapList(std::string keyWord)
+void Pluginx64::UpdateQuickSearchResults(const std::string& keyWord)
 {
-	std::vector<Map> List;
-	for (auto map : MapList)
+	QuickSearch_LastQuery = keyWord;
+	QuickSearch_Results.clear();
+	if (keyWord.empty())
+	{
+		QuickSearch_Searching = false;
+		return;
+	}
+
+	QuickSearch_Searching = true;
+	QuickSearch_Results = QuickSearch_GetMapList(keyWord);
+}
+
+std::vector<Map*> Pluginx64::QuickSearch_GetMapList(const std::string& keyWord)
+{
+	std::vector<Map*> List;
+	std::string loweredKeyword = keyWord;
+	std::transform(loweredKeyword.begin(), loweredKeyword.end(), loweredKeyword.begin(), ::tolower);
+	for (auto& map : MapList)
 	{
 		std::string mapName = map.mapName;
+		std::transform(mapName.begin(), mapName.end(), mapName.begin(), ::tolower);
 
-		std::transform(mapName.begin(), mapName.end(), mapName.begin(), ::tolower); //transform a string to lowercase
-		std::transform(keyWord.begin(), keyWord.end(), keyWord.begin(), ::tolower); //transform a string to lowercase
-
-		if (mapName.find(keyWord) != std::string::npos) //if keyWord is in the mapNameToLower
+		if (mapName.find(loweredKeyword) != std::string::npos)
 		{
-			List.push_back(map);
+			List.push_back(&map);
 		}
 	}
 	return List;
