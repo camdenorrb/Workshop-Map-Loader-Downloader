@@ -61,7 +61,7 @@ I've made a tutorial if you are struggling to make it work : [https://www.youtub
    ```powershell
    cmake --build build --config Release
    ```
-4. The resulting `WorkshopMapLoader.dll` is written to `build/plugins`. Copy it to `BakkesMod/bakkesmod/plugins/` if you want the game to load it automatically.
+4. The resulting `WorkshopMapLoader.dll` is written to `build/plugins`. The build automatically runs `bakkesmod-patch.exe` (shipped with the SDK) on the DLL so BakkesMod can load it. Copy the patched DLL to `BakkesMod/bakkesmod/plugins/` if you want the game to load it automatically.
 
 ### CI builds
 

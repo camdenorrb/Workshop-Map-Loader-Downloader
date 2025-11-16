@@ -46,6 +46,12 @@ set(SOURCES
 
 add_library(WorkshopMapLoader SHARED ${SOURCES})
 
+target_compile_definitions(WorkshopMapLoader PRIVATE
+    BAKKESMODPLUGINHTTPREQUEST_EXPORTS
+    _WINDOWS
+    _USRDLL
+)
+
 target_include_directories(WorkshopMapLoader PRIVATE
     Pluginx64
     Pluginx64/IMGUI
@@ -92,3 +98,14 @@ set_target_properties(WorkshopMapLoader PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins"
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins"
 )
+
+set(BAKKESMOD_PATCH_EXE "${BAKKESMOD_SDK_PATH}/bakkesmod-patch.exe" CACHE FILEPATH "Path to bakkesmod-patch.exe")
+if(EXISTS "${BAKKESMOD_PATCH_EXE}")
+    add_custom_command(TARGET WorkshopMapLoader POST_BUILD
+        COMMAND "${BAKKESMOD_PATCH_EXE}" "$<TARGET_FILE:WorkshopMapLoader>"
+        COMMENT "Patching WorkshopMapLoader with bakkesmod-patch"
+        VERBATIM
+    )
+else()
+    message(WARNING "bakkesmod-patch.exe not found at ${BAKKESMOD_PATCH_EXE}; resulting DLL will fail to load in BakkesMod.")
+endif()
