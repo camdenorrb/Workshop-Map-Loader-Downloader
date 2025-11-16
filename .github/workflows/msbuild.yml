@@ -27,10 +27,25 @@ jobs:
           ref: master
           path: deps/BakkesModSDK
 
+      - name: Prepare SDK layout
+        shell: pwsh
+        run: |
+          $SdkSrc = Join-Path $env:GITHUB_WORKSPACE "deps\BakkesModSDK"
+          $SdkRoot = Join-Path $SdkSrc "wrapper"
+          $SdkDst = Join-Path $SdkRoot "bakkesmodsdk"
+          $IncludeDst = Join-Path $SdkDst "include"
+          $LibDst = Join-Path $SdkDst "lib"
+          New-Item -ItemType Directory -Force -Path $IncludeDst | Out-Null
+          New-Item -ItemType Directory -Force -Path $LibDst | Out-Null
+          Copy-Item -Recurse -Force (Join-Path $SdkSrc "include\*") $IncludeDst
+          Copy-Item -Recurse -Force (Join-Path $SdkSrc "lib\*") $LibDst
+          Copy-Item -Force (Join-Path $SdkSrc "bakkesmod-patch.exe") $SdkDst
+          "SDK_ROOT=$SdkRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
+
       - name: Build with MSBuild
         shell: pwsh
         run: |
-          $SdkPath = Join-Path $env:GITHUB_WORKSPACE "deps\BakkesModSDK"
+          $SdkPath = "$env:SDK_ROOT"
           if (-not (Test-Path $SdkPath)) {
             throw "BakkesMod SDK not found at $SdkPath"
           }
