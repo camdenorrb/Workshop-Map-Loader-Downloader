@@ -1191,12 +1191,50 @@ void Pluginx64::EnsureGridTitleCache(Map& map, float buttonWidth)
 	map.gridDisplayWidth = usableWidth;
 }
 
-void Pluginx64::renderMaps_DisplayMode_0(const Map& map, int mapIndex, float childWidth)
+void Pluginx64::EnsureGridTitleCache(Map& map, float buttonWidth)
+{
+	float usableWidth = buttonWidth * 0.808f;
+	if (usableWidth < 0.f)
+	{
+		usableWidth = 0.f;
+	}
+
+	if (!map.gridDisplayName.empty() && std::fabs(map.gridDisplayWidth - usableWidth) < 0.5f)
+	{
+		return;
+	}
+
+	if (map.displayName.empty() && map.JsonFile != "NoInfos")
+	{
+		UpdateMapDisplayCache(map);
+	}
+
+	std::string gridName = !map.displayName.empty() ? map.displayName : map.mapName;
+
+	if (usableWidth > 0.f && ImGui::CalcTextSize(gridName.c_str()).x > usableWidth)
+	{
+		const float ellipsisWidth = ImGui::CalcTextSize("...").x;
+		float maxTextWidth = usableWidth - ellipsisWidth;
+		if (maxTextWidth < 0.f)
+		{
+			maxTextWidth = 0.f;
+		}
+		gridName = LimitTextSize(gridName, maxTextWidth);
+		gridName.append("...");
+	}
+
+	map.gridDisplayName = std::move(gridName);
+	map.gridDisplayWidth = usableWidth;
+}
+
+void Pluginx64::renderMaps_DisplayMode_0(Map& map, int mapIndex, float childWidth)
 {
 	ImGui::BeginGroup();
 	{
 		ImDrawList* draw_list = ImGui::GetWindowDrawList();
 		ImFont* fontA = ImGui::GetDefaultFont();
+
+		UpdateMapDisplayCache(map);
 
 		if (ImGui::Button("##map", ImVec2(childWidth, 120)))
 		{
@@ -1281,11 +1319,12 @@ void Pluginx64::renderMaps_DisplayMode_0(const Map& map, int mapIndex, float chi
 	}
 }
 
-void Pluginx64::renderMaps_DisplayMode_1(const Map& map, float buttonWidth, int mapIndex)
+void Pluginx64::renderMaps_DisplayMode_1(Map& map, float buttonWidth, int mapIndex)
 {
 	ImGui::BeginGroup();
 	{
 		ImDrawList* draw_list = ImGui::GetWindowDrawList();
+		UpdateMapDisplayCache(map);
 
 		if (ImGui::Button("##map", ImVec2(buttonWidth, (buttonWidth * 0.75f))))
 		{
