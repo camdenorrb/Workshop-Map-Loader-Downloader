@@ -112,7 +112,7 @@ public:
 	double lastRenderAnnouncementTabMs = 0.0;
 	double lastRenderChangelogTabMs = 0.0;
 	std::vector<std::string> cachedMissingTextures;
-	std::chrono::steady_clock::time_point nextMissingTexturesCheck = std::chrono::steady_clock::time_point::min();
+	std::chrono::steady_clock::time_point nextMissingTexturesCheck{};
 	bool missingTexturesCacheDirty = true;
 	int selectedButton = 0;
 

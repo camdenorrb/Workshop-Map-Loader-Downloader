@@ -970,7 +970,7 @@ std::vector<std::string> Pluginx64::CheckExist_TexturesFiles()
 const std::vector<std::string>& Pluginx64::GetMissingTexturesSnapshot()
 {
 	const auto now = std::chrono::steady_clock::now();
-	if (missingTexturesCacheDirty || now >= nextMissingTexturesCheck)
+	if (missingTexturesCacheDirty || nextMissingTexturesCheck.time_since_epoch().count() == 0 || now >= nextMissingTexturesCheck)
 	{
 		cachedMissingTextures = CheckExist_TexturesFiles();
 		missingTexturesCacheDirty = false;
