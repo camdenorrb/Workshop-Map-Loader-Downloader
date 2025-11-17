@@ -805,8 +805,8 @@ void Pluginx64::renderMaps(Gamepad controller)
 	const int totalEntries = missingCount + playableCount;
 
 	mapButtonList.resize(totalEntries);
-	std::vector<bool> mapButtonHasGeometry(totalEntries, false);
-	std::vector<bool> hoveringFlags(playableCount, false);
+	mapButtonHasGeometry.assign(totalEntries, false);
+	hoveringFlags.assign(playableCount, false);
 
 	if (selectedButton >= totalEntries)
 	{
@@ -965,33 +965,51 @@ void Pluginx64::renderMaps(Gamepad controller)
 
 		const float scrollY = ImGui::GetScrollY();
 		const float tileHeight = computedButtonWidth * 0.75f;
-
-		for (int globalIndex = missingCount; globalIndex < totalEntries; ++globalIndex)
+		auto ensureButtonGeometry = [&](int globalIndex) -> mapButtonPos
 		{
-			if (mapButtonHasGeometry[globalIndex])
-				continue;
+			mapButtonPos invalid{};
+			if (globalIndex < 0 || globalIndex >= totalEntries)
+			{
+				return invalid;
+			}
 
-			const int localIndex = globalIndex - missingCount;
-			mapButtonPos placeholder{};
-			if (MapsDisplayMode == 0)
+			if (!mapButtonHasGeometry[globalIndex])
 			{
-				const float localY = localIndex * (listItemHeight + spacingY);
-				placeholder.rectMin = ImVec2(MapButtonChild_TopPos.x, MapButtonChild_TopPos.y + localY - scrollY);
-				placeholder.rectMax = ImVec2(placeholder.rectMin.x + windowWidth, placeholder.rectMin.y + listItemHeight);
+				mapButtonPos placeholder{};
+				if (globalIndex >= missingCount)
+				{
+					const int localIndex = globalIndex - missingCount;
+					if (MapsDisplayMode == 0)
+					{
+						const float localY = localIndex * (listItemHeight + spacingY);
+						placeholder.rectMin = ImVec2(MapButtonChild_TopPos.x, MapButtonChild_TopPos.y + localY - scrollY);
+						placeholder.rectMax = ImVec2(placeholder.rectMin.x + windowWidth, placeholder.rectMin.y + listItemHeight);
+					}
+					else
+					{
+						const int tilesPerLine = nbTilesPerLine > 0 ? nbTilesPerLine : 1;
+						const int column = localIndex % tilesPerLine;
+						const int row = localIndex / tilesPerLine;
+						const float localX = column * (computedButtonWidth + spacingX);
+						const float localY = row * (tileHeight + spacingY);
+						placeholder.rectMin = ImVec2(MapButtonChild_TopPos.x + localX, MapButtonChild_TopPos.y + localY - scrollY);
+						placeholder.rectMax = ImVec2(placeholder.rectMin.x + computedButtonWidth, placeholder.rectMin.y + tileHeight);
+					}
+				}
+				else
+				{
+					placeholder.rectMin = MapButtonChild_TopPos;
+					placeholder.rectMax = ImVec2(MapButtonChild_TopPos.x + windowWidth, MapButtonChild_TopPos.y + listItemHeight);
+				}
+
+				placeholder.cursorPos = ImVec2((placeholder.rectMin.x + placeholder.rectMax.x) * 0.5f, (placeholder.rectMin.y + placeholder.rectMax.y) * 0.5f);
+				placeholder.isDisplayed = false;
+				mapButtonList[globalIndex] = placeholder;
+				mapButtonHasGeometry[globalIndex] = true;
 			}
-			else
-			{
-				const int column = (nbTilesPerLine > 0) ? localIndex % nbTilesPerLine : 0;
-				const int row = (nbTilesPerLine > 0) ? localIndex / nbTilesPerLine : 0;
-				const float localX = column * (computedButtonWidth + spacingX);
-				const float localY = row * (tileHeight + spacingY);
-				placeholder.rectMin = ImVec2(MapButtonChild_TopPos.x + localX, MapButtonChild_TopPos.y + localY - scrollY);
-				placeholder.rectMax = ImVec2(placeholder.rectMin.x + computedButtonWidth, placeholder.rectMin.y + tileHeight);
-			}
-			placeholder.cursorPos = ImVec2((placeholder.rectMin.x + placeholder.rectMax.x) * 0.5f, (placeholder.rectMin.y + placeholder.rectMax.y) * 0.5f);
-			placeholder.isDisplayed = false;
-			mapButtonList[globalIndex] = placeholder;
-		}
+
+			return mapButtonList[globalIndex];
+		};
 
 		isHoveringMapButton = false;
 		for (bool hovered : hoveringFlags)
@@ -1027,7 +1045,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 						if (MapsDisplayMode == 1 && (selectedButton - nbTilesPerLine) >= 0)
 							selectedButton -= nbTilesPerLine;
 					}
-					mapButtonPos buttonMap = mapButtonList.at(selectedButton);
+					mapButtonPos buttonMap = ensureButtonGeometry(selectedButton);
 
 					if (buttonMap.isDisplayed)
 					{
@@ -1070,7 +1088,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 							}
 						}
 					}
-					mapButtonPos buttonMap = mapButtonList.at(selectedButton);
+					mapButtonPos buttonMap = ensureButtonGeometry(selectedButton);
 
 					if (buttonMap.isDisplayed)
 					{
@@ -1100,7 +1118,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 						selectedButton -= 1;
 
 
-					mapButtonPos buttonMap = mapButtonList.at(selectedButton);
+					mapButtonPos buttonMap = ensureButtonGeometry(selectedButton);
 
 					if (buttonMap.isDisplayed)
 					{
@@ -1130,7 +1148,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 					if (MapsDisplayMode == 1 && selectedButton < mapButtonList.size() - 1)
 						selectedButton++;
 
-					mapButtonPos buttonMap = mapButtonList.at(selectedButton);
+					mapButtonPos buttonMap = ensureButtonGeometry(selectedButton);
 
 					if (buttonMap.isDisplayed)
 					{
