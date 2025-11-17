@@ -102,6 +102,14 @@ public:
 	int lastRenderMapsMissingCount = 0;
 	int lastRenderMapsPlayableCount = 0;
 	bool lastRenderMapsQuickSearch = false;
+	double lastRenderControllerMs = 0.0;
+	double lastRenderLocalizationMs = 0.0;
+	double lastRenderMenuBarMs = 0.0;
+	double lastRenderTabBarMs = 0.0;
+	double lastRenderMapTabMs = 0.0;
+	double lastRenderSearchTabMs = 0.0;
+	double lastRenderAnnouncementTabMs = 0.0;
+	double lastRenderChangelogTabMs = 0.0;
 	int selectedButton = 0;
 
 	bool UseController = false;

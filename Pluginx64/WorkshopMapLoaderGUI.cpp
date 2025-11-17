@@ -37,58 +37,62 @@ void Pluginx64::Render()
 	}
 
 	Gamepad controller1 = Gamepad(1);
-
-	controller1.Update();
-	if (controller1.Connected())
+	double controllerBlockMs = 0.0;
 	{
-		float stickX = controller1.LeftStick_X();
-		float stickY = controller1.LeftStick_Y();
-
-		POINT point;
-		GetCursorPos(&point);
-
-		static bool L1WasPressed = false;
-		static bool BWasPressed = false;
-
-		if (controller1.checkButtonPress(XINPUT_GAMEPAD_LEFT_SHOULDER) && !L1WasPressed) {
-			cvarManager->log("Button L1 is pressed");
-			mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0); //Left click down
-			L1WasPressed = true;
-		}
-		else if (!controller1.checkButtonPress(XINPUT_GAMEPAD_LEFT_SHOULDER) && L1WasPressed)
+		const auto controllerBlockStart = std::chrono::steady_clock::now();
+		controller1.Update();
+		if (controller1.Connected())
 		{
-			mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0); //Left click realease
+			float stickX = controller1.LeftStick_X();
+			float stickY = controller1.LeftStick_Y();
 
-			cvarManager->log("Button L1 is realeased");
-			L1WasPressed = false;
+			POINT point;
+			GetCursorPos(&point);
+
+			static bool L1WasPressed = false;
+			static bool BWasPressed = false;
+
+			if (controller1.checkButtonPress(XINPUT_GAMEPAD_LEFT_SHOULDER) && !L1WasPressed) {
+				cvarManager->log("Button L1 is pressed");
+				mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0); //Left click down
+				L1WasPressed = true;
+			}
+			else if (!controller1.checkButtonPress(XINPUT_GAMEPAD_LEFT_SHOULDER) && L1WasPressed)
+			{
+				mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0); //Left click realease
+
+				cvarManager->log("Button L1 is realeased");
+				L1WasPressed = false;
+			}
+
+
+			if (controller1.checkButtonPress(XINPUT_GAMEPAD_B) && !BWasPressed) {
+				cvarManager->log("Button B is pressed");
+				BWasPressed = true;
+			}
+			else if (!controller1.checkButtonPress(XINPUT_GAMEPAD_B) && BWasPressed)
+			{
+				isWindowOpen_ = false;
+				cvarManager->log("Button B is realeased");
+				BWasPressed = false;
+			}
+
+
+			if (!controller1.LStick_InDeadzone())
+			{
+				int pixelsX = 0;
+				int pixelsY = 0;
+
+				pixelsX = stickX * ControllerSensitivity;
+				pixelsY = stickY * ControllerSensitivity;
+
+				//cvarManager->log("pixelX : " + std::to_string(pixelsX));
+				//cvarManager->log("pixelY : " + std::to_string(pixelsY));
+
+				SetCursorPos(point.x + pixelsX, point.y - pixelsY);
+			}
 		}
-
-
-		if (controller1.checkButtonPress(XINPUT_GAMEPAD_B) && !BWasPressed) {
-			cvarManager->log("Button B is pressed");
-			BWasPressed = true;
-		}
-		else if (!controller1.checkButtonPress(XINPUT_GAMEPAD_B) && BWasPressed)
-		{
-			isWindowOpen_ = false;
-			cvarManager->log("Button B is realeased");
-			BWasPressed = false;
-		}
-
-
-		if (!controller1.LStick_InDeadzone())
-		{
-			int pixelsX = 0;
-			int pixelsY = 0;
-
-			pixelsX = stickX * ControllerSensitivity;
-			pixelsY = stickY * ControllerSensitivity;
-
-			//cvarManager->log("pixelX : " + std::to_string(pixelsX));
-			//cvarManager->log("pixelY : " + std::to_string(pixelsY));
-
-			SetCursorPos(point.x + pixelsX, point.y - pixelsY);
-		}
+		controllerBlockMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - controllerBlockStart).count();
 	}
 	
 
@@ -118,6 +122,8 @@ void Pluginx64::Render()
 	}
 
 
+	double localizationBlockMs = 0.0;
+	const auto localizationStart = std::chrono::steady_clock::now();
 	if (!FR)
 	{
 		//Menubar
@@ -210,11 +216,12 @@ void Pluginx64::Render()
 		CloseText = "Close";
 		DontAskText = "Don't ask me again";
 
-		//File Explorer
-		NewFolderText = "New Folder";
-		ConfirmText = "Confirm";
-		SelectText = "Select";
-	}
+	//File Explorer
+	NewFolderText = "New Folder";
+	ConfirmText = "Confirm";
+	SelectText = "Select";
+}
+localizationBlockMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - localizationStart).count();
 	else
 	{
 		//Menubar
@@ -330,8 +337,10 @@ void Pluginx64::Render()
 	renderInfoPopup("Add Map Successfull", MapAddedSuccessfullyText.c_str()); //"Map added successfully !"
 
 
+	double menuBarMs = 0.0;
 	if (ImGui::BeginMenuBar())
 	{
+		const auto menuBarStart = std::chrono::steady_clock::now();
 		if (ImGui::BeginMenu(SettingsText.c_str())) //"Settings"
 		{
 			if (ImGui::BeginMenu(ExtractMethodText.c_str()))
@@ -483,13 +492,21 @@ void Pluginx64::Render()
 			ImGui::EndMenu();
 		}
 		ImGui::EndMenuBar();
+		menuBarMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - menuBarStart).count();
 	}
 
+	double mapTabMs = 0.0;
+	double searchTabMs = 0.0;
+	double announcementTabMs = 0.0;
+	double changelogTabMs = 0.0;
+	double tabBarMs = 0.0;
 
 	if (ImGui::BeginTabBar("TabBar"))
 	{
+		const auto tabBarStart = std::chrono::steady_clock::now();
 		if (ImGui::BeginTabItem(Tab1MapLoaderText.c_str())) // "Map Loader"
 		{
+			const auto mapTabStart = std::chrono::steady_clock::now();
 			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.f);
 
 			CenterNexIMGUItItem(ImGui::CalcTextSize(Label1Text.c_str()).x);
@@ -640,11 +657,13 @@ void Pluginx64::Render()
 			renderMaps(controller1);
 
 			ImGui::EndTabItem();
+			mapTabMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - mapTabStart).count();
 		}
 
 
 		if (ImGui::BeginTabItem(Tab3SearchWorkshopText.c_str()))
 		{
+			const auto searchTabStart = std::chrono::steady_clock::now();
 			static char keyWord[200] = "";
 			ImGui::BeginGroup();
 			{
@@ -776,14 +795,24 @@ void Pluginx64::Render()
 				ImGui::EndChild();
 			}
 			ImGui::EndTabItem();
+			searchTabMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - searchTabStart).count();
 		}
 		ImGui::EndTabBar();
+		tabBarMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tabBarStart).count();
 	}
 
 	ImGui::End();
 
 	const auto windowRenderEnd = std::chrono::steady_clock::now();
 	const double windowRenderMs = std::chrono::duration<double, std::milli>(windowRenderEnd - windowRenderStart).count();
+	lastRenderControllerMs = controllerBlockMs;
+	lastRenderLocalizationMs = localizationBlockMs;
+	lastRenderMenuBarMs = menuBarMs;
+	lastRenderTabBarMs = tabBarMs;
+	lastRenderMapTabMs = mapTabMs;
+	lastRenderSearchTabMs = searchTabMs;
+	lastRenderAnnouncementTabMs = announcementTabMs;
+	lastRenderChangelogTabMs = changelogTabMs;
 	if (logWindowRender)
 	{
 		std::string msg = "[WML] Render window summary open=" + std::string(isWindowOpen_ ? "true" : "false")
@@ -794,7 +823,15 @@ void Pluginx64::Render()
 			+ " controllerMs=" + std::to_string(lastRenderMapsControllerMs)
 			+ " missingCount=" + std::to_string(lastRenderMapsMissingCount)
 			+ " playableCount=" + std::to_string(lastRenderMapsPlayableCount)
-			+ " quickSearch=" + std::string(lastRenderMapsQuickSearch ? "true" : "false");
+			+ " quickSearch=" + std::string(lastRenderMapsQuickSearch ? "true" : "false")
+			+ " controllerBlockMs=" + std::to_string(controllerBlockMs)
+			+ " localizationMs=" + std::to_string(localizationBlockMs)
+			+ " menuBarMs=" + std::to_string(menuBarMs)
+			+ " tabBarMs=" + std::to_string(tabBarMs)
+			+ " mapTabMs=" + std::to_string(mapTabMs)
+			+ " searchTabMs=" + std::to_string(searchTabMs)
+			+ " announcementTabMs=" + std::to_string(announcementTabMs)
+			+ " changelogTabMs=" + std::to_string(changelogTabMs);
 		cvarManager->log(msg);
 		nextWindowRenderLog = windowRenderStart + std::chrono::milliseconds(2000);
 	}
@@ -2174,6 +2211,7 @@ void Pluginx64::renderNewUpdatePopup()
 		{
 			if (ImGui::BeginTabItem("Announcement"))
 			{
+				const auto announcementStart = std::chrono::steady_clock::now();
 				ImGui::NewLine();
 
 				ImGui::Checkbox("French", &french);
@@ -2209,10 +2247,12 @@ void Pluginx64::renderNewUpdatePopup()
 				ImGui::NewLine();
 
 				ImGui::EndTabItem();
+				announcementTabMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - announcementStart).count();
 			}
 
 			if (ImGui::BeginTabItem(std::string("Changelog v" + PluginVersion).c_str())) // "Announcement"
 			{
+				const auto changelogStart = std::chrono::steady_clock::now();
 				ImGui::NewLine();
 
 				ImGui::Checkbox("French", &french);
@@ -2262,9 +2302,10 @@ void Pluginx64::renderNewUpdatePopup()
 				ImGui::NewLine();
 
 				ImGui::EndTabItem();
+				changelogTabMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - changelogStart).count();
 			}
-			ImGui::EndTabBar();
-		}
+		ImGui::EndTabBar();
+	}
 
 		
 
