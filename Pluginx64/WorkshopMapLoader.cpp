@@ -408,6 +408,11 @@ void Pluginx64::AddMapManually(std::string mapName, std::string mapAuthor, std::
 
 void Pluginx64::UpdateMapDisplayCache(Map& map)
 {
+	if (!map.displayCacheDirty)
+	{
+		return;
+	}
+
 	if (map.JsonFile == "NoInfos")
 	{
 		map.displayName = replace(map.Folder.filename().string(), *"_", *" ");
@@ -431,6 +436,7 @@ void Pluginx64::UpdateMapDisplayCache(Map& map)
 
 	map.gridDisplayName.clear();
 	map.gridDisplayWidth = -1.f;
+	map.displayCacheDirty = false;
 }
 
 void Pluginx64::InvalidateMapFilterCache()

@@ -1172,7 +1172,7 @@ void Pluginx64::EnsureGridTitleCache(Map& map, float buttonWidth)
 		return;
 	}
 
-	if ((map.displayName.empty() || map.displayDescription.empty()) && map.JsonFile != "NoInfos")
+	if (map.displayCacheDirty)
 	{
 		UpdateMapDisplayCache(map);
 	}
@@ -1203,7 +1203,10 @@ void Pluginx64::renderMaps_DisplayMode_0(Map& map, int mapIndex, float childWidt
 		ImDrawList* draw_list = ImGui::GetWindowDrawList();
 		ImFont* fontA = ImGui::GetDefaultFont();
 
-		UpdateMapDisplayCache(map);
+		if (map.displayCacheDirty)
+		{
+			UpdateMapDisplayCache(map);
+		}
 
 		if (ImGui::Button("##map", ImVec2(childWidth, 120)))
 		{
@@ -1293,7 +1296,10 @@ void Pluginx64::renderMaps_DisplayMode_1(Map& map, float buttonWidth, int mapInd
 	ImGui::BeginGroup();
 	{
 		ImDrawList* draw_list = ImGui::GetWindowDrawList();
-		UpdateMapDisplayCache(map);
+		if (map.displayCacheDirty)
+		{
+			UpdateMapDisplayCache(map);
+		}
 
 		if (ImGui::Button("##map", ImVec2(buttonWidth, (buttonWidth * 0.75f))))
 		{

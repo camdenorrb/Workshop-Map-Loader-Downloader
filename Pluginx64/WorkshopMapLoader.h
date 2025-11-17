@@ -18,6 +18,7 @@ struct Map
 	std::string displayDescription;
 	std::string gridDisplayName;
 	float gridDisplayWidth = -1.f;
+	bool displayCacheDirty = true;
 
 	std::filesystem::path Folder; //Map folder
 	std::filesystem::path UpkFile; //Map(.upk) in the map directory
