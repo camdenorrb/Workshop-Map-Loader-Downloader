@@ -2,6 +2,7 @@
 #include "WorkshopMapLoader.h"
 #include "IMGUI/imgui_internal.h"
 #include <cmath>
+#include <chrono>
 
 namespace fs = std::filesystem;
 
@@ -787,6 +788,7 @@ void Pluginx64::Render()
 
 void Pluginx64::renderMaps(Gamepad controller)
 {
+	const auto frameStart = std::chrono::steady_clock::now();
 	const std::vector<Map*>& NoUpk_MapList = GetMapsNeedingExtraction();
 	const std::vector<Map*>& Good_MapList = GetPlayableMaps();
 
@@ -813,6 +815,8 @@ void Pluginx64::renderMaps(Gamepad controller)
 	{
 		selectedButton = totalEntries == 0 ? 0 : totalEntries - 1;
 	}
+	static auto nextLogTime = std::chrono::steady_clock::now();
+	const bool shouldLogFrame = std::chrono::steady_clock::now() >= nextLogTime;
 
 	if (ImGui::BeginChild("#MapsLauncherButtons"))
 	{
@@ -1206,6 +1210,21 @@ void Pluginx64::renderMaps(Gamepad controller)
 
 	}
 	ImGui::EndChild();
+
+	const auto frameEnd = std::chrono::steady_clock::now();
+	const double frameMs = std::chrono::duration<double, std::milli>(frameEnd - frameStart).count();
+	if (shouldLogFrame)
+	{
+		std::string msg = "[WML] renderMaps summary maps=" + std::to_string(MapList.size())
+			+ " missing=" + std::to_string(missingCount)
+			+ " playable=" + std::to_string(playableCount)
+			+ " quickSearch=" + std::string(usingQuickSearch ? "true" : "false")
+			+ " displayMode=" + std::to_string(MapsDisplayMode)
+			+ " tilesPerLine=" + std::to_string(nbTilesPerLine)
+			+ " durationMs=" + std::to_string(frameMs);
+		cvarManager->log(msg);
+		nextLogTime = frameEnd + std::chrono::milliseconds(2000);
+	}
 }
 
 void Pluginx64::EnsureGridTitleCache(Map& map, float buttonWidth)
