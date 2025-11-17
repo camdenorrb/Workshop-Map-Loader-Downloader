@@ -814,9 +814,9 @@ void Pluginx64::renderMaps(Gamepad controller)
 		selectedButton = totalEntries == 0 ? 0 : totalEntries - 1;
 	}
 
-	MapButtonChild_TopPos = ImGui::GetCursorScreenPos();
 	if (ImGui::BeginChild("#MapsLauncherButtons"))
 	{
+		MapButtonChild_TopPos = ImGui::GetCursorScreenPos();
 		const ImGuiStyle& style = ImGui::GetStyle();
 		const float windowWidth = ImGui::GetWindowWidth();
 		const float spacingX = style.ItemSpacing.x;
@@ -832,134 +832,179 @@ void Pluginx64::renderMaps(Gamepad controller)
 			computedButtonWidth = 0.f;
 		}
 
-		for (int missingIndex = 0; missingIndex < missingCount; ++missingIndex)
+		const ImVec2 missingOrigin = ImGui::GetCursorPos();
+		if (missingCount > 0)
 		{
-			auto* curMap = NoUpk_MapList[missingIndex];
-			ImGui::PushID(missingIndex);
-			ImGui::BeginGroup();
+			ImGuiListClipper missingClipper;
+			missingClipper.Begin(missingCount, listItemHeight + spacingY);
+			while (missingClipper.Step())
 			{
-				ImDrawList* draw_list = ImGui::GetWindowDrawList();
-				ImFont* fontA = ImGui::GetDefaultFont();
-
-				if (ImGui::Button("##map", ImVec2(ImGui::GetWindowWidth(), listItemHeight)))
+				for (int missingIndex = missingClipper.DisplayStart; missingIndex < missingClipper.DisplayEnd; ++missingIndex)
 				{
-					ImGui::OpenPopup("ExtractMapFiles");
-				}
-				renderExtractMapFilesPopup(*curMap);
-
-				mapButtonPos buttonMap;
-				buttonMap.rectMin = ImGui::GetItemRectMin();
-				buttonMap.rectMax = ImGui::GetItemRectMax();
-				buttonMap.cursorPos = ImVec2(((buttonMap.rectMax.x - buttonMap.rectMin.x) / 2) + buttonMap.rectMin.x, ((buttonMap.rectMax.y - buttonMap.rectMin.y) / 2) + buttonMap.rectMin.y);
-				buttonMap.isDisplayed = ImGui::IsItemVisible();
-				mapButtonList[missingIndex] = buttonMap;
-				mapButtonGeometryFrame[missingIndex] = currentButtonFrame;
-
-				if (buttonMap.isDisplayed)
-				{
-					ImVec2 ButtonRectMin = buttonMap.rectMin;
-					ImVec2 ButtonRectMax = buttonMap.rectMax;
-					ImVec2 ImageMin = ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 5.f);
-					ImVec2 ImageMax = ImVec2(ImageMin.x + 190.f, ButtonRectMax.y - 5.f);
-
-					draw_list->AddRect(ImageMin, ImageMax, ImColor(255, 255, 255, 255), 0, 15, 2.0F);
-					if (curMap->isPreviewImageLoaded == true)
+					auto* curMap = NoUpk_MapList[missingIndex];
+					ImGui::SetCursorPos(ImVec2(missingOrigin.x, missingOrigin.y + missingIndex * (listItemHeight + spacingY)));
+					ImGui::PushID(missingIndex);
+					ImGui::BeginGroup();
 					{
-						try
+						ImDrawList* draw_list = ImGui::GetWindowDrawList();
+						ImFont* fontA = ImGui::GetDefaultFont();
+
+						if (ImGui::Button("##map", ImVec2(ImGui::GetWindowWidth(), listItemHeight)))
 						{
-							if (curMap->PreviewImage != nullptr && curMap->PreviewImage->GetImGuiTex())
-							{
-								draw_list->AddImage(curMap->PreviewImage->GetImGuiTex(), ImageMin, ImageMax);
-							}
+							ImGui::OpenPopup("ExtractMapFiles");
 						}
-						catch (const std::exception& ex)
+						renderExtractMapFilesPopup(*curMap);
+
+						mapButtonPos buttonMap;
+						buttonMap.rectMin = ImGui::GetItemRectMin();
+						buttonMap.rectMax = ImGui::GetItemRectMax();
+						buttonMap.cursorPos = ImVec2(((buttonMap.rectMax.x - buttonMap.rectMin.x) / 2) + buttonMap.rectMin.x, ((buttonMap.rectMax.y - buttonMap.rectMin.y) / 2) + buttonMap.rectMin.y);
+						buttonMap.isDisplayed = ImGui::IsItemVisible();
+						mapButtonList[missingIndex] = buttonMap;
+						mapButtonGeometryFrame[missingIndex] = currentButtonFrame;
+
+						if (buttonMap.isDisplayed)
 						{
-							cvarManager->log(ex.what());
+							ImVec2 ButtonRectMin = buttonMap.rectMin;
+							ImVec2 ButtonRectMax = buttonMap.rectMax;
+							ImVec2 ImageMin = ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 5.f);
+							ImVec2 ImageMax = ImVec2(ImageMin.x + 190.f, ButtonRectMax.y - 5.f);
+
+							draw_list->AddRect(ImageMin, ImageMax, ImColor(255, 255, 255, 255), 0, 15, 2.0F);
+							if (curMap->isPreviewImageLoaded == true)
+							{
+								try
+								{
+									if (curMap->PreviewImage != nullptr && curMap->PreviewImage->GetImGuiTex())
+									{
+										draw_list->AddImage(curMap->PreviewImage->GetImGuiTex(), ImageMin, ImageMax);
+									}
+								}
+								catch (const std::exception& ex)
+								{
+									cvarManager->log(ex.what());
+								}
+							}
+
+							std::string mapName = curMap->JsonFile == "NoInfos"
+								? replace(curMap->Folder.filename().string(), *"_", *" ")
+								: curMap->mapName;
+
+							draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 2.f), ImColor(255, 255, 255, 255),
+								mapName.c_str());
+
+							draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 40.f), ImColor(255, 0, 0, 255),
+								"This map wont work because the map isn't extracted, click to fix.");
 						}
 					}
+					ImGui::EndGroup();
 
-					std::string mapName = curMap->JsonFile == "NoInfos"
-						? replace(curMap->Folder.filename().string(), *"_", *" ")
-						: curMap->mapName;
+					if (ImGui::BeginPopupContextItem("Map context menu"))
+					{
+						if (ImGui::Selectable(OpenMapDirText.c_str()))
+						{
+							std::wstring w_CurrentMapsDir = s2ws(curMap->Folder.string());
+							LPCWSTR L_CurrentMapsDir = w_CurrentMapsDir.c_str();
+							ShellExecuteW(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT);
+						}
 
-					draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 2.f), ImColor(255, 255, 255, 255),
-						mapName.c_str());
+						if (ImGui::Selectable(DeleteMapText.c_str()))
+						{
+							fs::remove_all(curMap->Folder);
+							RefreshMapsFunct(MapsFolderPathBuf);
+						}
+						ImGui::EndPopup();
+					}
 
-					draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 40.f), ImColor(255, 0, 0, 255),
-						"This map wont work because the map isn't extracted, click to fix.");
+					ImGui::PopID();
 				}
 			}
-			ImGui::EndGroup();
 
-			if (ImGui::BeginPopupContextItem("Map context menu"))
-			{
-				if (ImGui::Selectable(OpenMapDirText.c_str()))
-				{
-					std::wstring w_CurrentMapsDir = s2ws(curMap->Folder.string());
-					LPCWSTR L_CurrentMapsDir = w_CurrentMapsDir.c_str();
-					ShellExecuteW(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT);
-				}
-
-				if (ImGui::Selectable(DeleteMapText.c_str()))
-				{
-					fs::remove_all(curMap->Folder);
-					RefreshMapsFunct(MapsFolderPathBuf);
-				}
-				ImGui::EndPopup();
-			}
-
-			ImGui::PopID();
+			ImGui::SetCursorPos(ImVec2(missingOrigin.x, missingOrigin.y + missingCount * (listItemHeight + spacingY)));
 		}
 
 		isHoveringMapButton = false;
-		ImGuiListClipper playableClipper;
-		playableClipper.Begin(playableCount);
-		while (playableClipper.Step())
+		const ImVec2 playableOrigin = ImGui::GetCursorPos();
+		if (playableCount > 0)
 		{
-			for (int localIndex = playableClipper.DisplayStart; localIndex < playableClipper.DisplayEnd; ++localIndex)
+			if (MapsDisplayMode == 0)
 			{
-				if (localIndex < 0 || localIndex >= playableCount)
-					continue;
-
-				int globalIndex = missingCount + localIndex;
-				auto* curMap = ActiveMapList[localIndex];
-				ImGui::PushID(globalIndex);
-
-				if (MapsDisplayMode == 0)
+				ImGuiListClipper playableClipper;
+				playableClipper.Begin(playableCount, listItemHeight + spacingY);
+				while (playableClipper.Step())
 				{
-					renderMaps_DisplayMode_0(*curMap, globalIndex, windowWidth);
-				}
-				else
-				{
-					if (nbTilesPerLine > 0)
+					for (int localIndex = playableClipper.DisplayStart; localIndex < playableClipper.DisplayEnd; ++localIndex)
 					{
-						const int column = localIndex % nbTilesPerLine;
-						if (column != 0)
+						if (localIndex < 0 || localIndex >= playableCount)
+							continue;
+
+						int globalIndex = missingCount + localIndex;
+						auto* curMap = ActiveMapList[localIndex];
+						ImGui::PushID(globalIndex);
+						ImGui::SetCursorPos(ImVec2(playableOrigin.x, playableOrigin.y + localIndex * (listItemHeight + spacingY)));
+						renderMaps_DisplayMode_0(*curMap, globalIndex, windowWidth);
+						mapButtonGeometryFrame[globalIndex] = currentButtonFrame;
+
+						if (ImGui::IsItemHovered())
 						{
-							ImGui::SameLine();
+							isHoveringMapButton = true;
+							selectedButton = globalIndex;
 						}
-						else if (localIndex != 0)
+
+						ImGui::PopID();
+					}
+				}
+			}
+			else
+			{
+				const int tilesPerLine = nbTilesPerLine > 0 ? nbTilesPerLine : 1;
+				const int rowCount = (playableCount + tilesPerLine - 1) / tilesPerLine;
+				const float tileHeight = computedButtonWidth * 0.75f;
+				ImGuiListClipper rowClipper;
+				rowClipper.Begin(rowCount, tileHeight + spacingY);
+				while (rowClipper.Step())
+				{
+					for (int row = rowClipper.DisplayStart; row < rowClipper.DisplayEnd; ++row)
+					{
+						const float rowY = playableOrigin.y + row * (tileHeight + spacingY);
+						for (int column = 0; column < tilesPerLine; ++column)
 						{
-							ImGui::NewLine();
+							const int localIndex = row * tilesPerLine + column;
+							if (localIndex >= playableCount)
+								break;
+
+							int globalIndex = missingCount + localIndex;
+							auto* curMap = ActiveMapList[localIndex];
+							const float columnX = playableOrigin.x + column * (computedButtonWidth + spacingX);
+							ImGui::SetCursorPos(ImVec2(columnX, rowY));
+							ImGui::PushID(globalIndex);
+							renderMaps_DisplayMode_1(*curMap, computedButtonWidth, globalIndex);
+							mapButtonGeometryFrame[globalIndex] = currentButtonFrame;
+
+							if (ImGui::IsItemHovered())
+							{
+								isHoveringMapButton = true;
+								selectedButton = globalIndex;
+							}
+
+							ImGui::PopID();
 						}
 					}
-					renderMaps_DisplayMode_1(*curMap, computedButtonWidth, globalIndex);
 				}
 
-				mapButtonGeometryFrame[globalIndex] = currentButtonFrame;
+				ImGui::SetCursorPos(ImVec2(playableOrigin.x, playableOrigin.y + rowCount * (tileHeight + spacingY)));
+			}
 
-				if (localIndex < playableCount && ImGui::IsItemHovered())
-				{
-					isHoveringMapButton = true;
-					selectedButton = globalIndex;
-				}
-
-				ImGui::PopID();
+			if (MapsDisplayMode == 0)
+			{
+				ImGui::SetCursorPos(ImVec2(playableOrigin.x, playableOrigin.y + playableCount * (listItemHeight + spacingY)));
 			}
 		}
 
 		const float scrollY = ImGui::GetScrollY();
 		const float tileHeight = computedButtonWidth * 0.75f;
+		const float missingAdvanceY = listItemHeight + spacingY;
+		const float missingSectionOffset = missingCount * missingAdvanceY;
 		auto ensureButtonGeometry = [&](int globalIndex) -> mapButtonPos
 		{
 			mapButtonPos invalid{};
@@ -976,8 +1021,8 @@ void Pluginx64::renderMaps(Gamepad controller)
 					const int localIndex = globalIndex - missingCount;
 					if (MapsDisplayMode == 0)
 					{
-						const float localY = localIndex * (listItemHeight + spacingY);
-						placeholder.rectMin = ImVec2(MapButtonChild_TopPos.x, MapButtonChild_TopPos.y + localY - scrollY);
+						const float localY = localIndex * missingAdvanceY;
+						placeholder.rectMin = ImVec2(MapButtonChild_TopPos.x, MapButtonChild_TopPos.y + missingSectionOffset + localY - scrollY);
 						placeholder.rectMax = ImVec2(placeholder.rectMin.x + windowWidth, placeholder.rectMin.y + listItemHeight);
 					}
 					else
@@ -987,13 +1032,14 @@ void Pluginx64::renderMaps(Gamepad controller)
 						const int row = localIndex / tilesPerLine;
 						const float localX = column * (computedButtonWidth + spacingX);
 						const float localY = row * (tileHeight + spacingY);
-						placeholder.rectMin = ImVec2(MapButtonChild_TopPos.x + localX, MapButtonChild_TopPos.y + localY - scrollY);
+						placeholder.rectMin = ImVec2(MapButtonChild_TopPos.x + localX, MapButtonChild_TopPos.y + missingSectionOffset + localY - scrollY);
 						placeholder.rectMax = ImVec2(placeholder.rectMin.x + computedButtonWidth, placeholder.rectMin.y + tileHeight);
 					}
 				}
 				else
 				{
-					placeholder.rectMin = MapButtonChild_TopPos;
+					const float localY = globalIndex * missingAdvanceY;
+					placeholder.rectMin = ImVec2(MapButtonChild_TopPos.x, MapButtonChild_TopPos.y + localY - scrollY);
 					placeholder.rectMax = ImVec2(MapButtonChild_TopPos.x + windowWidth, MapButtonChild_TopPos.y + listItemHeight);
 				}
 
