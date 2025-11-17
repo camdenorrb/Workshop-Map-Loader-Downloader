@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "WorkshopMapLoader.h"
 #include "IMGUI/imgui_internal.h"
+#include <cmath>
 
 namespace fs = std::filesystem;
 
@@ -1158,6 +1159,38 @@ void Pluginx64::renderMaps(Gamepad controller)
 	ImGui::EndChild();
 }
 
+void Pluginx64::EnsureGridTitleCache(Map& map, float buttonWidth)
+{
+	float usableWidth = buttonWidth * 0.808f;
+	if (usableWidth < 0.f)
+	{
+		usableWidth = 0.f;
+	}
+
+	if (!map.gridDisplayName.empty() && std::fabs(map.gridDisplayWidth - usableWidth) < 0.5f)
+	{
+		return;
+	}
+
+	std::string baseName = !map.displayName.empty() ? map.displayName : map.mapName;
+	std::string gridName = baseName;
+
+	if (usableWidth > 0.f && ImGui::CalcTextSize(gridName.c_str()).x > usableWidth)
+	{
+		const float ellipsisWidth = ImGui::CalcTextSize("...").x;
+		float maxTextWidth = usableWidth - ellipsisWidth;
+		if (maxTextWidth < 0.f)
+		{
+			maxTextWidth = 0.f;
+		}
+		gridName = LimitTextSize(gridName, maxTextWidth);
+		gridName.append("...");
+	}
+
+	map.gridDisplayName = std::move(gridName);
+	map.gridDisplayWidth = usableWidth;
+}
+
 void Pluginx64::renderMaps_DisplayMode_0(const Map& map, int mapIndex, float childWidth)
 {
 	ImGui::BeginGroup();
@@ -1199,12 +1232,9 @@ void Pluginx64::renderMaps_DisplayMode_0(const Map& map, int mapIndex, float chi
 			{
 				try
 				{
-					if (map.PreviewImage != nullptr)
+					if (map.PreviewImage != nullptr && map.PreviewImage->GetImGuiTex())
 					{
-						if (map.PreviewImage->GetImGuiTex())
-						{
-							draw_list->AddImage(map.PreviewImage->GetImGuiTex(), ImageMin, ImageMax); //Map image preview
-						}
+						draw_list->AddImage(map.PreviewImage->GetImGuiTex(), ImageMin, ImageMax); //Map image preview
 					}
 				}
 				catch (const std::exception& ex)
@@ -1216,26 +1246,14 @@ void Pluginx64::renderMaps_DisplayMode_0(const Map& map, int mapIndex, float chi
 			if (map.JsonFile == "NoInfos")
 			{
 				draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 10.f), ImColor(255, 255, 255, 255),
-					replace(map.Folder.filename().string(), *"_", *" ").c_str());
+					map.displayName.c_str());
 			}
 			else
 			{
-
-				std::string GoodDescription = map.mapDescription;
-				if (map.mapDescription.length() > 150)
-				{
-					GoodDescription.insert(145, "\n");
-
-					if (map.mapDescription.length() > 280)
-					{
-						GoodDescription.erase(280);
-						GoodDescription.append("...");
-					}
-				}
-
+				const std::string& listTitle = map.displayName.empty() ? map.mapName : map.displayName;
 				draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 2.f), ImColor(255, 255, 255, 255),
-					map.mapName.c_str()); //Map title
-				draw_list->AddText(fontA, 15.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 40.f), ImColor(200, 200, 200, 255), GoodDescription.c_str()); //Map Description
+					listTitle.c_str()); //Map title
+				draw_list->AddText(fontA, 15.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 40.f), ImColor(200, 200, 200, 255), map.displayDescription.c_str()); //Map Description
 				draw_list->AddText(fontA, 15.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 90.f), ImColor(0, 200, 255, 255),
 					std::string(ResultByText.c_str() + map.mapAuthor).c_str()); // "By " Map Author
 			}
@@ -1302,12 +1320,9 @@ void Pluginx64::renderMaps_DisplayMode_1(const Map& map, float buttonWidth, int 
 			{
 				try
 				{
-					if (map.PreviewImage != nullptr)
+					if (map.PreviewImage != nullptr && map.PreviewImage->GetImGuiTex())
 					{
-						if (map.PreviewImage->GetImGuiTex())
-						{
-							draw_list->AddImage(map.PreviewImage->GetImGuiTex(), ImageMin, ImageMax); //Map image preview
-						}
+						draw_list->AddImage(map.PreviewImage->GetImGuiTex(), ImageMin, ImageMax); //Map image preview
 					}
 				}
 				catch (const std::exception& ex)
@@ -1317,21 +1332,8 @@ void Pluginx64::renderMaps_DisplayMode_1(const Map& map, float buttonWidth, int 
 			}
 
 			ImFont* fontA = ImGui::GetDefaultFont();
-
-			std::string mapTitle;
-			if (map.JsonFile == "NoInfos")
-			{
-				mapTitle = replace(map.Folder.filename().string(), *"_", *" ");
-			}
-			else
-			{
-				mapTitle = map.mapName;
-			}
-
-			if (ImGui::CalcTextSize(mapTitle.c_str()).x > (buttonWidth * 0.808f))
-			{
-				mapTitle = LimitTextSize(mapTitle, (buttonWidth * 0.808f) - ImGui::CalcTextSize("...").x) + "...";
-			}
+			EnsureGridTitleCache(map, buttonWidth);
+			const std::string& mapTitle = map.gridDisplayName.empty() ? (map.displayName.empty() ? map.mapName : map.displayName) : map.gridDisplayName;
 
 			draw_list->AddText(fontA, 15.5f, ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 6.f), ImColor(255, 255, 255, 255), mapTitle.c_str()); //Map title
 		}

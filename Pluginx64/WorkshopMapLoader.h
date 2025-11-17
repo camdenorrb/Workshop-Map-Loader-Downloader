@@ -14,6 +14,10 @@ struct Map
 	std::string mapName;
 	std::string mapDescription;
 	std::string mapAuthor;
+	std::string displayName;
+	std::string displayDescription;
+	std::string gridDisplayName;
+	float gridDisplayWidth = -1.f;
 
 	std::filesystem::path Folder; //Map folder
 	std::filesystem::path UpkFile; //Map(.upk) in the map directory
@@ -141,6 +145,8 @@ public:
 	void UpdateMapFilterCache();
 	const std::vector<Map*>& GetMapsNeedingExtraction();
 	const std::vector<Map*>& GetPlayableMaps();
+	void UpdateMapDisplayCache(Map& map);
+	void EnsureGridTitleCache(Map& map, float buttonWidth);
 
 	//Display mode
 	int nbTilesPerLine = 5;

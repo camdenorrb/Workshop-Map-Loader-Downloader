@@ -334,6 +334,7 @@ void Pluginx64::RefreshMapsFunct(std::string mapsfolders)
 		}
 
 
+		UpdateMapDisplayCache(map);
 		MapList.push_back(map);
 		cvarManager->log("");
 	}
@@ -403,6 +404,33 @@ void Pluginx64::AddMapManually(std::string mapName, std::string mapAuthor, std::
 
 	cvarManager->log(mapName + " added successfully!");
 	AddedMapSccuessfully = true;
+}
+
+void Pluginx64::UpdateMapDisplayCache(Map& map)
+{
+	if (map.JsonFile == "NoInfos")
+	{
+		map.displayName = replace(map.Folder.filename().string(), *"_", *" ");
+		map.displayDescription.clear();
+	}
+	else
+	{
+		map.displayName = map.mapName;
+		std::string description = map.mapDescription;
+		if (description.length() > 150)
+		{
+			description.insert(145, "\n");
+			if (description.length() > 280)
+			{
+				description.erase(280);
+				description.append("...");
+			}
+		}
+		map.displayDescription = std::move(description);
+	}
+
+	map.gridDisplayName.clear();
+	map.gridDisplayWidth = -1.f;
 }
 
 void Pluginx64::InvalidateMapFilterCache()
