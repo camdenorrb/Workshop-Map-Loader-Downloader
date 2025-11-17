@@ -139,6 +139,7 @@ public:
 	const std::vector<std::string>& GetMissingTexturesSnapshot();
 	void InvalidateMissingTexturesCache();
 	void UpdateLocalizationTexts(bool french);
+	void ApplyLocalization(bool french);
 
 
 	

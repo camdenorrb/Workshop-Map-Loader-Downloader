@@ -115,9 +115,7 @@ void Pluginx64::onLoad()
 	}
 
 
-	UpdateLocalizationTexts(FR);
-	localizationInitialized = true;
-	lastLocalizationFrench = FR;
+	ApplyLocalization(FR);
 }
 
 void Pluginx64::UpdateLocalizationTexts(bool french)
@@ -315,6 +313,21 @@ void Pluginx64::UpdateLocalizationTexts(bool french)
 		ConfirmText = "Confirmer";
 		SelectText = "Selectionner";
 	}
+}
+
+void Pluginx64::ApplyLocalization(bool french)
+{
+	if (localizationInitialized && lastLocalizationFrench == french)
+	{
+		lastRenderLocalizationMs = 0.0;
+		return;
+	}
+
+	const auto localizationStart = std::chrono::steady_clock::now();
+	UpdateLocalizationTexts(french);
+	localizationInitialized = true;
+	lastLocalizationFrench = french;
+	lastRenderLocalizationMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - localizationStart).count();
 }
 
 

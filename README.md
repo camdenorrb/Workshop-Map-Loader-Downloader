@@ -67,6 +67,21 @@ I've made a tutorial if you are struggling to make it work : [https://www.youtub
 
 The GitHub Actions workflow (`.github/workflows/build.yml`) automatically clones the public [BakkesModSDK](https://github.com/bakkesmodorg/BakkesModSDK) repository (which already exposes the required `include/` and `lib/` directories at its root) and runs the same CMake build on every push/PR. Because the runners do not have a full BakkesMod installation, the workflow configures CMake with `-DBAKKESMOD_ENABLE_PATCH=OFF` and uploads the unpatched Release DLL as an artifact; patch it locally before loading it into the game.
 
+## Dev Container (Windows/MSBuild)
+
+The repo also contains a VS Code [Development Container](.devcontainer/) that spins up a Windows-based environment mirroring the GitHub Actions setup (MSBuild + Visual Studio Build Tools). To use it:
+
+1. Install Docker Desktop with Windows container support enabled, VS Code, and the “Dev Containers” extension.
+2. Open this folder in VS Code and choose **Dev Containers: Reopen in Container**.
+3. Inside the container, clone/download the [BakkesMod SDK](https://github.com/bakkesmodorg/BakkesModSDK) into `deps/BakkesModSDK` (or mount an existing copy) so that `deps/BakkesModSDK/wrapper/bakkesmodsdk/include` and `lib` exist.
+4. From a PowerShell terminal inside the container run:
+   ```powershell
+   msbuild Pluginx64\Pluginx64.vcxproj /t:Build /p:Configuration=Release /p:Platform=x64 /p:BakkesModPath="C:\workspaces\Workshop-Map-Loader-Downloader\deps\BakkesModSDK\wrapper"
+   ```
+   Adjust `BakkesModPath` if your SDK lives elsewhere. The patched DLL appears under `build\plugins\`.
+
+Because the container image already includes MSBuild, Ninja, CMake, Git, Python, etc., this workflow matches the CI environment closely and keeps builds consistent across contributors.
+
 ## Bugs/Issues Known
 
 - If you use Windows 7 you wont be able to load the plugin, add me on discord (just below) I can give you an old version working for Windows 7

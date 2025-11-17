@@ -122,17 +122,9 @@ void Pluginx64::Render()
 	}
 
 
-	double localizationBlockMs = 0.0;
-	const auto localizationStart = std::chrono::steady_clock::now();
-	if (!localizationInitialized || lastLocalizationFrench != FR)
-	{
-		UpdateLocalizationTexts(FR);
-		localizationInitialized = true;
-		lastLocalizationFrench = FR;
-		localizationBlockMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - localizationStart).count();
-	}
+	double localizationBlockMs = lastRenderLocalizationMs;
+	lastRenderLocalizationMs = 0.0;
 	const auto& missingTexturesFiles = GetMissingTexturesSnapshot();
-	localizationBlockMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - localizationStart).count();
 
 
 	if (!HasSeeNewUpdateAlert)
@@ -196,14 +188,22 @@ void Pluginx64::Render()
 			{
 				if (ImGui::Selectable("French"))
 				{
-					FR = true;
-					SaveInCFG();
+					if (!FR)
+					{
+						FR = true;
+						ApplyLocalization(FR);
+						SaveInCFG();
+					}
 				}
 
 				if (ImGui::Selectable("English"))
 				{
-					FR = false;
-					SaveInCFG();
+					if (FR)
+					{
+						FR = false;
+						ApplyLocalization(FR);
+						SaveInCFG();
+					}
 				}
 				ImGui::EndMenu();
 			}
@@ -616,7 +616,6 @@ void Pluginx64::Render()
 	const auto windowRenderEnd = std::chrono::steady_clock::now();
 	const double windowRenderMs = std::chrono::duration<double, std::milli>(windowRenderEnd - windowRenderStart).count();
 	lastRenderControllerMs = controllerBlockMs;
-	lastRenderLocalizationMs = localizationBlockMs;
 	lastRenderMenuBarMs = menuBarMs;
 	lastRenderTabBarMs = tabBarMs;
 	lastRenderMapTabMs = mapTabMs;
