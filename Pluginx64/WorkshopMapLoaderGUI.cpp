@@ -321,6 +321,7 @@ else
 		SelectText = "Selectionner";
 	}
 	localizationBlockMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - localizationStart).count();
+	const auto& missingTexturesFiles = GetMissingTexturesSnapshot();
 	localizationBlockMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - localizationStart).count();
 
 
@@ -465,7 +466,7 @@ else
 		{
 			ImGui::OpenPopup("DownloadTextures");
 		}
-		renderDownloadTexturesPopup(CheckExist_TexturesFiles());
+		renderDownloadTexturesPopup(missingTexturesFiles);
 
 
 		if (ImGui::Selectable(LastUpdateText.c_str(), false, 0, ImGui::CalcTextSize(LastUpdateText.c_str())))
@@ -514,8 +515,10 @@ else
 			CenterNexIMGUItItem(628.f);
 			ImGui::SetNextItemWidth(628.f);
 			ImGui::InputText("##workshopurl123", MapsFolderPathBuf, IM_ARRAYSIZE(MapsFolderPathBuf));
+			const fs::path mapsFolderPathBuffered = fs::path(MapsFolderPathBuf);
+			const bool mapsFolderExists = Directory_Or_File_Exists(mapsFolderPathBuffered);
 			ImGui::SameLine();
-			if (!Directory_Or_File_Exists(fs::path(MapsFolderPathBuf)))
+			if (!mapsFolderExists)
 			{
 				ImGui::TextColored(ImVec4(255, 0, 0, 1), DirNotExistText.c_str());
 			}
@@ -556,11 +559,9 @@ else
 
 			ImGui::SameLine();
 
-			std::vector<std::string> missingTexturesFiles = CheckExist_TexturesFiles();
-
 			if (ImGui::Button(RefreshMapsButtonText.c_str(), ImVec2(151.f, 32.f))) // "Refresh Maps"
 			{
-				if (!Directory_Or_File_Exists(fs::path(MapsFolderPathBuf)))
+				if (!mapsFolderExists)
 				{
 					ImGui::OpenPopup("Exists?");
 				}
@@ -2039,7 +2040,7 @@ void Pluginx64::renderReleases(const RLMAPS_MapResult& mapResult)
 	}
 }
 
-void Pluginx64::renderDownloadTexturesPopup(std::vector<std::string> missingTextureFiles)
+void Pluginx64::renderDownloadTexturesPopup(const std::vector<std::string>& missingTextureFiles)
 {
 	if (ImGui::BeginPopupModal("DownloadTextures", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{

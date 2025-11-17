@@ -950,6 +950,7 @@ void Pluginx64::DownloadWorkshopTextures()
 	}
 
 	cvarManager->log("Texture archive extraction scheduled");
+	InvalidateMissingTexturesCache();
 }
 
 std::vector<std::string> Pluginx64::CheckExist_TexturesFiles()
@@ -964,6 +965,23 @@ std::vector<std::string> Pluginx64::CheckExist_TexturesFiles()
 	}
 
 	return missingFiles;
+}
+
+const std::vector<std::string>& Pluginx64::GetMissingTexturesSnapshot()
+{
+	const auto now = std::chrono::steady_clock::now();
+	if (missingTexturesCacheDirty || now >= nextMissingTexturesCheck)
+	{
+		cachedMissingTextures = CheckExist_TexturesFiles();
+		missingTexturesCacheDirty = false;
+		nextMissingTexturesCheck = now + std::chrono::seconds(2);
+	}
+	return cachedMissingTextures;
+}
+
+void Pluginx64::InvalidateMissingTexturesCache()
+{
+	missingTexturesCacheDirty = true;
 }
 
 

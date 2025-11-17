@@ -5,6 +5,7 @@
 #include "bakkesmod/plugin/PluginSettingsWindow.h"
 
 #include "Gamepad.h"
+#include <chrono>
 
 //#include <WinUser.h>
 
@@ -110,6 +111,9 @@ public:
 	double lastRenderSearchTabMs = 0.0;
 	double lastRenderAnnouncementTabMs = 0.0;
 	double lastRenderChangelogTabMs = 0.0;
+	std::vector<std::string> cachedMissingTextures;
+	std::chrono::steady_clock::time_point nextMissingTexturesCheck = std::chrono::steady_clock::time_point::min();
+	bool missingTexturesCacheDirty = true;
 	int selectedButton = 0;
 
 	bool UseController = false;
@@ -130,6 +134,8 @@ public:
 	void DownloadWorkshopTextures();
 	int Download_Textrures_Progress;
 	int DownloadTextrures_ProgressDisplayed;
+	const std::vector<std::string>& GetMissingTexturesSnapshot();
+	void InvalidateMissingTexturesCache();
 
 
 	
@@ -276,7 +282,7 @@ public:
 	void renderExtractMapFilesPopup(const Map& curMap);
 	void renderAcceptDownload();
 	void renderDownloadFailedPopup();
-	void renderDownloadTexturesPopup(std::vector<std::string> missingTextureFiles);
+	void renderDownloadTexturesPopup(const std::vector<std::string>& missingTextureFiles);
 
 
 	bool AddedMapSccuessfully = false;
