@@ -787,8 +787,6 @@ void Pluginx64::Render()
 
 void Pluginx64::renderMaps(Gamepad controller)
 {
-	mapButtonList.clear();
-
 	const std::vector<Map*>& NoUpk_MapList = GetMapsNeedingExtraction();
 	const std::vector<Map*>& Good_MapList = GetPlayableMaps();
 
@@ -805,8 +803,11 @@ void Pluginx64::renderMaps(Gamepad controller)
 	const int totalEntries = missingCount + playableCount;
 
 	mapButtonList.resize(totalEntries);
-	mapButtonHasGeometry.assign(totalEntries, false);
-	hoveringFlags.assign(playableCount, false);
+	if (mapButtonGeometryFrame.size() < static_cast<size_t>(totalEntries))
+	{
+		mapButtonGeometryFrame.resize(totalEntries, 0);
+	}
+	const uint32_t currentButtonFrame = ++mapButtonFrameMarker;
 
 	if (selectedButton >= totalEntries)
 	{
@@ -852,7 +853,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 				buttonMap.cursorPos = ImVec2(((buttonMap.rectMax.x - buttonMap.rectMin.x) / 2) + buttonMap.rectMin.x, ((buttonMap.rectMax.y - buttonMap.rectMin.y) / 2) + buttonMap.rectMin.y);
 				buttonMap.isDisplayed = ImGui::IsItemVisible();
 				mapButtonList[missingIndex] = buttonMap;
-				mapButtonHasGeometry[missingIndex] = true;
+				mapButtonGeometryFrame[missingIndex] = currentButtonFrame;
 
 				if (buttonMap.isDisplayed)
 				{
@@ -910,6 +911,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 			ImGui::PopID();
 		}
 
+		isHoveringMapButton = false;
 		ImGuiListClipper playableClipper;
 		playableClipper.Begin(playableCount);
 		while (playableClipper.Step())
@@ -944,19 +946,12 @@ void Pluginx64::renderMaps(Gamepad controller)
 					renderMaps_DisplayMode_1(*curMap, computedButtonWidth, globalIndex);
 				}
 
-				mapButtonHasGeometry[globalIndex] = true;
+				mapButtonGeometryFrame[globalIndex] = currentButtonFrame;
 
-				if (localIndex < playableCount)
+				if (localIndex < playableCount && ImGui::IsItemHovered())
 				{
-					if (ImGui::IsItemHovered())
-					{
-						hoveringFlags[localIndex] = true;
-						selectedButton = globalIndex;
-					}
-					else
-					{
-						hoveringFlags[localIndex] = false;
-					}
+					isHoveringMapButton = true;
+					selectedButton = globalIndex;
 				}
 
 				ImGui::PopID();
@@ -973,7 +968,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 				return invalid;
 			}
 
-			if (!mapButtonHasGeometry[globalIndex])
+			if (mapButtonGeometryFrame[globalIndex] != currentButtonFrame)
 			{
 				mapButtonPos placeholder{};
 				if (globalIndex >= missingCount)
@@ -1005,21 +1000,11 @@ void Pluginx64::renderMaps(Gamepad controller)
 				placeholder.cursorPos = ImVec2((placeholder.rectMin.x + placeholder.rectMax.x) * 0.5f, (placeholder.rectMin.y + placeholder.rectMax.y) * 0.5f);
 				placeholder.isDisplayed = false;
 				mapButtonList[globalIndex] = placeholder;
-				mapButtonHasGeometry[globalIndex] = true;
+				mapButtonGeometryFrame[globalIndex] = currentButtonFrame;
 			}
 
 			return mapButtonList[globalIndex];
 		};
-
-		isHoveringMapButton = false;
-		for (bool hovered : hoveringFlags)
-		{
-			if (hovered)
-			{
-				isHoveringMapButton = true;
-				break;
-			}
-		}
 
 		float rightStickY = controller.RightStick_Y();
 

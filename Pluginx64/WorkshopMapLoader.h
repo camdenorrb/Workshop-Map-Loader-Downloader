@@ -93,8 +93,8 @@ public:
 
 	ImVec2 MapButtonChild_TopPos;
 	std::vector<mapButtonPos> mapButtonList;
-	std::vector<bool> mapButtonHasGeometry;
-	std::vector<bool> hoveringFlags;
+	std::vector<uint32_t> mapButtonGeometryFrame;
+	uint32_t mapButtonFrameMarker = 0;
 	int selectedButton = 0;
 
 	bool UseController = false;
