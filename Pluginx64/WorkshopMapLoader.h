@@ -111,6 +111,8 @@ public:
 	double lastRenderSearchTabMs = 0.0;
 	double lastRenderAnnouncementTabMs = 0.0;
 	double lastRenderChangelogTabMs = 0.0;
+	bool localizationInitialized = false;
+	bool lastLocalizationFrench = false;
 	std::vector<std::string> cachedMissingTextures;
 	std::chrono::steady_clock::time_point nextMissingTexturesCheck{};
 	bool missingTexturesCacheDirty = true;
@@ -136,6 +138,7 @@ public:
 	int DownloadTextrures_ProgressDisplayed;
 	const std::vector<std::string>& GetMissingTexturesSnapshot();
 	void InvalidateMissingTexturesCache();
+	void UpdateLocalizationTexts(bool french);
 
 
 	
