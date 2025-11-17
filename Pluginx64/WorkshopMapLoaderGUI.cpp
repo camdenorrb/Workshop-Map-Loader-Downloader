@@ -1172,44 +1172,13 @@ void Pluginx64::EnsureGridTitleCache(Map& map, float buttonWidth)
 		return;
 	}
 
-	std::string baseName = !map.displayName.empty() ? map.displayName : map.mapName;
-	std::string gridName = baseName;
-
-	if (usableWidth > 0.f && ImGui::CalcTextSize(gridName.c_str()).x > usableWidth)
-	{
-		const float ellipsisWidth = ImGui::CalcTextSize("...").x;
-		float maxTextWidth = usableWidth - ellipsisWidth;
-		if (maxTextWidth < 0.f)
-		{
-			maxTextWidth = 0.f;
-		}
-		gridName = LimitTextSize(gridName, maxTextWidth);
-		gridName.append("...");
-	}
-
-	map.gridDisplayName = std::move(gridName);
-	map.gridDisplayWidth = usableWidth;
-}
-
-void Pluginx64::EnsureGridTitleCache(Map& map, float buttonWidth)
-{
-	float usableWidth = buttonWidth * 0.808f;
-	if (usableWidth < 0.f)
-	{
-		usableWidth = 0.f;
-	}
-
-	if (!map.gridDisplayName.empty() && std::fabs(map.gridDisplayWidth - usableWidth) < 0.5f)
-	{
-		return;
-	}
-
-	if (map.displayName.empty() && map.JsonFile != "NoInfos")
+	if ((map.displayName.empty() || map.displayDescription.empty()) && map.JsonFile != "NoInfos")
 	{
 		UpdateMapDisplayCache(map);
 	}
 
-	std::string gridName = !map.displayName.empty() ? map.displayName : map.mapName;
+	std::string baseName = !map.displayName.empty() ? map.displayName : map.mapName;
+	std::string gridName = baseName;
 
 	if (usableWidth > 0.f && ImGui::CalcTextSize(gridName.c_str()).x > usableWidth)
 	{
