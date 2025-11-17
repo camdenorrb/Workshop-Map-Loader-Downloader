@@ -839,8 +839,13 @@ void Pluginx64::renderMaps(Gamepad controller)
 	static auto nextLogTime = std::chrono::steady_clock::now();
 	const bool shouldLogFrame = std::chrono::steady_clock::now() >= nextLogTime;
 
+	double missingRenderMs = 0.0;
+	double playableRenderMs = 0.0;
+	double controllerRenderMs = 0.0;
+
 	if (ImGui::BeginChild("#MapsLauncherButtons"))
 	{
+		auto missingRenderStart = std::chrono::steady_clock::now();
 		MapButtonChild_TopPos = ImGui::GetCursorScreenPos();
 		const ImGuiStyle& style = ImGui::GetStyle();
 		const float windowWidth = ImGui::GetWindowWidth();
@@ -857,8 +862,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 			computedButtonWidth = 0.f;
 		}
 
-		double missingRenderMs = 0.0;
-		const auto missingRenderStart = std::chrono::steady_clock::now();
+		missingRenderStart = std::chrono::steady_clock::now();
 		const ImVec2 missingOrigin = ImGui::GetCursorPos();
 		if (missingCount > 0)
 		{
@@ -952,7 +956,6 @@ void Pluginx64::renderMaps(Gamepad controller)
 		missingRenderMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - missingRenderStart).count();
 
 		isHoveringMapButton = false;
-		double playableRenderMs = 0.0;
 		const auto playableRenderStart = std::chrono::steady_clock::now();
 		const ImVec2 playableOrigin = ImGui::GetCursorPos();
 		if (playableCount > 0)
@@ -1083,7 +1086,6 @@ void Pluginx64::renderMaps(Gamepad controller)
 			return mapButtonList[globalIndex];
 		};
 
-		double controllerRenderMs = 0.0;
 		const auto controllerRenderStart = std::chrono::steady_clock::now();
 		float rightStickY = controller.RightStick_Y();
 
