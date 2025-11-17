@@ -23,6 +23,10 @@ float windowSizeYBefore = ImGui::GetWindowSize().y;
 
 void Pluginx64::Render()
 {
+	const auto windowRenderStart = std::chrono::steady_clock::now();
+	static auto nextWindowRenderLog = windowRenderStart;
+	const bool logWindowRender = windowRenderStart >= nextWindowRenderLog;
+
 	ImGui::SetNextWindowSizeConstraints(ImVec2(1326.f, 690.f), ImVec2(1920.f, 1080.f));
 
 	if (!ImGui::Begin(menuTitle_.c_str(), &isWindowOpen_, ImGuiWindowFlags_MenuBar))
@@ -778,6 +782,23 @@ void Pluginx64::Render()
 
 	ImGui::End();
 
+	const auto windowRenderEnd = std::chrono::steady_clock::now();
+	const double windowRenderMs = std::chrono::duration<double, std::milli>(windowRenderEnd - windowRenderStart).count();
+	if (logWindowRender)
+	{
+		std::string msg = "[WML] Render window summary open=" + std::string(isWindowOpen_ ? "true" : "false")
+			+ " totalMs=" + std::to_string(windowRenderMs)
+			+ " mapsMs=" + std::to_string(lastRenderMapsDurationMs)
+			+ " missingMs=" + std::to_string(lastRenderMapsMissingMs)
+			+ " playableMs=" + std::to_string(lastRenderMapsPlayableMs)
+			+ " controllerMs=" + std::to_string(lastRenderMapsControllerMs)
+			+ " missingCount=" + std::to_string(lastRenderMapsMissingCount)
+			+ " playableCount=" + std::to_string(lastRenderMapsPlayableCount)
+			+ " quickSearch=" + std::string(lastRenderMapsQuickSearch ? "true" : "false");
+		cvarManager->log(msg);
+		nextWindowRenderLog = windowRenderStart + std::chrono::milliseconds(2000);
+	}
+
 	if (!isWindowOpen_)
 	{
 		cvarManager->executeCommand("togglemenu " + GetMenuName());
@@ -836,6 +857,8 @@ void Pluginx64::renderMaps(Gamepad controller)
 			computedButtonWidth = 0.f;
 		}
 
+		double missingRenderMs = 0.0;
+		const auto missingRenderStart = std::chrono::steady_clock::now();
 		const ImVec2 missingOrigin = ImGui::GetCursorPos();
 		if (missingCount > 0)
 		{
@@ -926,8 +949,11 @@ void Pluginx64::renderMaps(Gamepad controller)
 
 			ImGui::SetCursorPos(ImVec2(missingOrigin.x, missingOrigin.y + missingCount * (listItemHeight + spacingY)));
 		}
+		missingRenderMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - missingRenderStart).count();
 
 		isHoveringMapButton = false;
+		double playableRenderMs = 0.0;
+		const auto playableRenderStart = std::chrono::steady_clock::now();
 		const ImVec2 playableOrigin = ImGui::GetCursorPos();
 		if (playableCount > 0)
 		{
@@ -1004,6 +1030,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 				ImGui::SetCursorPos(ImVec2(playableOrigin.x, playableOrigin.y + playableCount * (listItemHeight + spacingY)));
 			}
 		}
+		playableRenderMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - playableRenderStart).count();
 
 		const float scrollY = ImGui::GetScrollY();
 		const float tileHeight = computedButtonWidth * 0.75f;
@@ -1056,6 +1083,8 @@ void Pluginx64::renderMaps(Gamepad controller)
 			return mapButtonList[globalIndex];
 		};
 
+		double controllerRenderMs = 0.0;
+		const auto controllerRenderStart = std::chrono::steady_clock::now();
 		float rightStickY = controller.RightStick_Y();
 
 		static bool DpadUpWasPressed = false;
@@ -1206,13 +1235,19 @@ void Pluginx64::renderMaps(Gamepad controller)
 				ImGui::SetScrollY(ImGui::GetScrollY() - (rightStickY * ControllerScrollSensitivity));
 			}
 		}
-
-
+		controllerRenderMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - controllerRenderStart).count();
 	}
 	ImGui::EndChild();
 
 	const auto frameEnd = std::chrono::steady_clock::now();
 	const double frameMs = std::chrono::duration<double, std::milli>(frameEnd - frameStart).count();
+	lastRenderMapsDurationMs = frameMs;
+	lastRenderMapsMissingMs = missingRenderMs;
+	lastRenderMapsPlayableMs = playableRenderMs;
+	lastRenderMapsControllerMs = controllerRenderMs;
+	lastRenderMapsMissingCount = missingCount;
+	lastRenderMapsPlayableCount = playableCount;
+	lastRenderMapsQuickSearch = usingQuickSearch;
 	if (shouldLogFrame)
 	{
 		std::string msg = "[WML] renderMaps summary maps=" + std::to_string(MapList.size())
@@ -1221,7 +1256,10 @@ void Pluginx64::renderMaps(Gamepad controller)
 			+ " quickSearch=" + std::string(usingQuickSearch ? "true" : "false")
 			+ " displayMode=" + std::to_string(MapsDisplayMode)
 			+ " tilesPerLine=" + std::to_string(nbTilesPerLine)
-			+ " durationMs=" + std::to_string(frameMs);
+			+ " durationMs=" + std::to_string(frameMs)
+			+ " missingMs=" + std::to_string(missingRenderMs)
+			+ " playableMs=" + std::to_string(playableRenderMs)
+			+ " controllerMs=" + std::to_string(controllerRenderMs);
 		cvarManager->log(msg);
 		nextLogTime = frameEnd + std::chrono::milliseconds(2000);
 	}

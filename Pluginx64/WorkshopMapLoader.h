@@ -95,6 +95,13 @@ public:
 	std::vector<mapButtonPos> mapButtonList;
 	std::vector<uint32_t> mapButtonGeometryFrame;
 	uint32_t mapButtonFrameMarker = 0;
+	double lastRenderMapsDurationMs = 0.0;
+	double lastRenderMapsMissingMs = 0.0;
+	double lastRenderMapsPlayableMs = 0.0;
+	double lastRenderMapsControllerMs = 0.0;
+	int lastRenderMapsMissingCount = 0;
+	int lastRenderMapsPlayableCount = 0;
+	bool lastRenderMapsQuickSearch = false;
 	int selectedButton = 0;
 
 	bool UseController = false;
