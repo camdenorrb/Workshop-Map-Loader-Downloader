@@ -216,12 +216,11 @@ void Pluginx64::Render()
 		CloseText = "Close";
 		DontAskText = "Don't ask me again";
 
-	//File Explorer
-	NewFolderText = "New Folder";
-	ConfirmText = "Confirm";
-	SelectText = "Select";
-}
-localizationBlockMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - localizationStart).count();
+		//File Explorer
+		NewFolderText = "New Folder";
+		ConfirmText = "Confirm";
+		SelectText = "Select";
+	}
 	else
 	{
 		//Menubar
@@ -321,6 +320,7 @@ localizationBlockMs = std::chrono::duration<double, std::milli>(std::chrono::ste
 		ConfirmText = "Confirmer";
 		SelectText = "Selectionner";
 	}
+	localizationBlockMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - localizationStart).count();
 
 
 	if (!HasSeeNewUpdateAlert)
