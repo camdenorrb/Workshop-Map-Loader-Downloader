@@ -788,23 +788,8 @@ void Pluginx64::renderMaps(Gamepad controller)
 {
 	mapButtonList.clear();
 
-	std::vector<Map*> NoUpk_MapList;
-	std::vector<Map*> Good_MapList;
-	NoUpk_MapList.reserve(MapList.size());
-	Good_MapList.reserve(MapList.size());
-
-	for (auto& map : MapList)
-	{
-		if (map.UpkFile == "NoUpkFound" && map.ZipFile != "EmptyFolder" && map.ZipFile != "NoZipFound")
-		{
-			NoUpk_MapList.push_back(&map);
-		}
-
-		if (map.UpkFile != "NoUpkFound" && map.UpkFile != "EmptyFolder")
-		{
-			Good_MapList.push_back(&map);
-		}
-	}
+	const std::vector<Map*>& NoUpk_MapList = GetMapsNeedingExtraction();
+	const std::vector<Map*>& Good_MapList = GetPlayableMaps();
 
 	const std::string quickSearchQuery = std::string(QuickSearch_KeyWordBuf);
 	if (quickSearchQuery != QuickSearch_LastQuery)
@@ -1446,7 +1431,7 @@ void Pluginx64::RLMAPS_RenderAResult(int i, ImDrawList* drawList, char mapspath[
 {
 	ImGui::PushID(i);
 
-	RLMAPS_MapResult mapResult = RLMAPS_MapResultList.at(i);
+	const RLMAPS_MapResult& mapResult = RLMAPS_MapResultList.at(i);
 	std::string mapName = mapResult.Name;
 	//std::string mapSize = mapResult.Size;
 	std::string mapDescription = mapResult.Description;
@@ -1574,11 +1559,36 @@ void Pluginx64::AlignRightNexIMGUItItem(float itemWidth, float borderGap)
 
 std::string Pluginx64::LimitTextSize(std::string str, float maxTextSize)
 {
-	while (ImGui::CalcTextSize(str.c_str()).x > maxTextSize)
+	if (str.empty())
 	{
-		str = str.substr(0, str.size() - 1);
+		return str;
 	}
-	return str;
+
+	if (ImGui::CalcTextSize(str.c_str()).x <= maxTextSize)
+	{
+		return str;
+	}
+
+	int left = 0;
+	int right = static_cast<int>(str.size());
+	int best = 0;
+
+	while (left < right)
+	{
+		int mid = (left + right) / 2;
+		std::string candidate = str.substr(0, mid);
+		if (ImGui::CalcTextSize(candidate.c_str()).x <= maxTextSize)
+		{
+			best = mid;
+			left = mid + 1;
+		}
+		else
+		{
+			right = mid;
+		}
+	}
+
+	return str.substr(0, best);
 }
 
 //https://gist.github.com/dougbinks/ef0962ef6ebe2cadae76c4e9f0586c69
@@ -1686,19 +1696,20 @@ void Pluginx64::renderExtractMapFilesPopup(const Map& curMap)
 		ImGui::Text(message.c_str());
 		ImGui::NewLine();
 
-
+		const std::string extractionLabel = "Extracting " + curMap.ZipFile.filename().string();
 		CenterNexIMGUItItem(326.f);
 		if (ImGui::Button("Powershell", ImVec2(100.f, 25.f)))
 		{
 			ImGui::CloseCurrentPopup();
 			std::string extractCommand = "powershell.exe Expand-Archive -LiteralPath '" + curMap.ZipFile.string() + "' -DestinationPath '" + curMap.Folder.string() + "/'";
-			system(extractCommand.c_str());
+			RunExternalCommandAsync(extractCommand, extractionLabel);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Batch File", ImVec2(100.f, 25.f)))
 		{
 			ImGui::CloseCurrentPopup();
-			CreateUnzipBatchFile(curMap.Folder.string() + "/", curMap.ZipFile.string());
+			const std::string batchFile = CreateUnzipBatchFile(curMap.Folder.string() + "/", curMap.ZipFile.string());
+			RunExternalCommandAsync(batchFile, extractionLabel);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button(EMFStillDoesntWorkText.c_str(), ImVec2(110.f, 25.f)))//"Still doesn't work"
@@ -1811,21 +1822,21 @@ void Pluginx64::renderInfoPopup(const char* popupName, const char* label)
 	}
 }
 
-void Pluginx64::renderReleases(RLMAPS_MapResult mapResult)
+void Pluginx64::renderReleases(const RLMAPS_MapResult& mapResult)
 {
 	if (ImGui::BeginPopupModal("Releases", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		for (int releasesIndex = 0; releasesIndex < mapResult.releases.size(); releasesIndex++)
 		{
-			RLMAPS_Release release = mapResult.releases[releasesIndex];
+			const RLMAPS_Release& release = mapResult.releases[releasesIndex];
 
 			if (ImGui::Button(release.tag_name.c_str(), ImVec2(182, 20))) // "Download Map"																								//Map download button
 			{
-				if (RLMAPS_IsDownloadingWorkshop == false && IsRetrievingWorkshopFiles == false && Directory_Or_File_Exists(fs::path(MapsFolderPathBuf)))
-				{
-					std::thread t2(&Pluginx64::RLMAPS_DownloadWorkshop, this, MapsFolderPathBuf, mapResult, release);
-					t2.detach();
-				}
+					if (RLMAPS_IsDownloadingWorkshop == false && IsRetrievingWorkshopFiles == false && Directory_Or_File_Exists(fs::path(MapsFolderPathBuf)))
+					{
+						std::thread t2(&Pluginx64::RLMAPS_DownloadWorkshop, this, MapsFolderPathBuf, mapResult, release);
+						t2.detach();
+					}
 				else
 				{
 					if (!Directory_Or_File_Exists(fs::path(MapsFolderPathBuf)))
@@ -2226,10 +2237,84 @@ void Pluginx64::renderFileExplorer()
 	ImGui::SetNextWindowSize(ImVec2(600.f, 429.f));
 	if (ImGui::BeginPopupModal("Select maps folder", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		static char newFolderName[200] = "";
+		struct ExplorerEntry
+		{
+			std::string name;
+			std::string fullPath;
+		};
 
+		static char newFolderName[200] = "";
 		static char fullPathBuff[256] = "C:/";
-		std::filesystem::path currentPath = fullPathBuff;
+		static std::vector<std::string> cachedDrives;
+		static std::vector<ExplorerEntry> cachedDirectories;
+		static std::filesystem::path cachedPath = std::filesystem::path(fullPathBuff);
+		static bool drivesDirty = true;
+		static bool directoriesDirty = true;
+
+		if (ImGui::IsWindowAppearing())
+		{
+			std::string defaultPath = std::string(MapsFolderPathBuf);
+			if (defaultPath.empty())
+			{
+				defaultPath = "C:/";
+			}
+			strncpy(fullPathBuff, defaultPath.c_str(), IM_ARRAYSIZE(fullPathBuff));
+			fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+			cachedPath = std::filesystem::path(fullPathBuff);
+			drivesDirty = true;
+			directoriesDirty = true;
+		}
+
+		auto refreshDrives = [&]()
+		{
+			cachedDrives = GetDrives();
+			drivesDirty = false;
+		};
+
+		auto refreshDirectories = [&]()
+		{
+			cachedDirectories.clear();
+			try
+			{
+				for (const auto& dir : fs::directory_iterator(cachedPath))
+				{
+					if (!dir.is_directory())
+					{
+						continue;
+					}
+					cachedDirectories.push_back({ dir.path().filename().string(), dir.path().string() });
+				}
+			}
+			catch (const std::exception& ex)
+			{
+				cvarManager->log("error : " + std::string(ex.what()));
+				if (cachedPath.has_parent_path())
+				{
+					cachedPath = cachedPath.parent_path();
+					strncpy(fullPathBuff, cachedPath.string().c_str(), IM_ARRAYSIZE(fullPathBuff));
+					fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+				}
+			}
+			directoriesDirty = false;
+		};
+
+		std::filesystem::path currentPath = std::filesystem::path(fullPathBuff);
+		if (currentPath.empty())
+		{
+			currentPath = "C:/";
+			strncpy(fullPathBuff, currentPath.string().c_str(), IM_ARRAYSIZE(fullPathBuff));
+			fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+		}
+
+		if (drivesDirty)
+		{
+			refreshDrives();
+		}
+		if (directoriesDirty || currentPath != cachedPath)
+		{
+			cachedPath = currentPath;
+			refreshDirectories();
+		}
 
 		ImGui::BeginChild("##fullPath", ImVec2(ImGui::GetContentRegionAvailWidth(), 35.f), true);
 		{
@@ -2237,31 +2322,36 @@ void Pluginx64::renderFileExplorer()
 			ImGui::SetColumnWidth(0, 40.f);
 
 			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3.f);
-			if(ImGui::Selectable("<--"))
+			if (ImGui::Selectable("<--"))
 			{
-				strncpy(fullPathBuff, currentPath.parent_path().string().c_str(), IM_ARRAYSIZE(fullPathBuff));
+				const std::filesystem::path parentPath = cachedPath.parent_path();
+				if (!parentPath.empty() && parentPath != cachedPath)
+				{
+					cachedPath = parentPath;
+					strncpy(fullPathBuff, cachedPath.string().c_str(), IM_ARRAYSIZE(fullPathBuff));
+					fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+					directoriesDirty = true;
+				}
 			}
 
 			ImGui::NextColumn();
 
-			std::vector<std::string> Drives = GetDrives();
-
 			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvailWidth() - 108.f);
-			if(ImGui::BeginCombo("", fullPathBuff))
+			if (ImGui::BeginCombo("", fullPathBuff))
 			{
-				for (auto drive : Drives)
+				for (const auto& drive : cachedDrives)
 				{
-					drive += ":/";
-					if (ImGui::Selectable(drive.c_str()))
+					const std::string driveLabel = drive + ":/";
+					if (ImGui::Selectable(driveLabel.c_str()))
 					{
-						strncpy(fullPathBuff, drive.c_str(), IM_ARRAYSIZE(fullPathBuff));
-						currentPath = fullPathBuff;
+						strncpy(fullPathBuff, driveLabel.c_str(), IM_ARRAYSIZE(fullPathBuff));
+						fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+						cachedPath = std::filesystem::path(fullPathBuff);
+						directoriesDirty = true;
 					}
 				}
 				ImGui::EndCombo();
 			}
-
-			currentPath = fullPathBuff;
 
 			ImGui::SameLine();
 
@@ -2277,7 +2367,8 @@ void Pluginx64::renderFileExplorer()
 				{
 					try
 					{
-						std::filesystem::create_directory(currentPath.string() + "/" + newFolderName);
+						std::filesystem::create_directory(cachedPath.string() + "/" + newFolderName);
+						directoriesDirty = true;
 					}
 					catch (const std::exception& ex) //manage errors when trying to create a folder in an administrator folder
 					{
@@ -2297,28 +2388,19 @@ void Pluginx64::renderFileExplorer()
 
 			ImGui::EndChild();
 		}
-		
+
 		ImGui::BeginChild("##directories", ImVec2(ImGui::GetContentRegionAvailWidth(), ImGui::GetWindowHeight() * 0.75f), true);
 		{
-			try
+			for (const auto& entry : cachedDirectories)
 			{
-				for (const auto& dir : fs::directory_iterator(currentPath))
+				if (ImGui::Selectable(entry.name.c_str()))
 				{
-					if (dir.is_directory())
-					{
-						if (ImGui::Selectable(dir.path().filename().string().c_str()))
-						{
-							strncpy(fullPathBuff, dir.path().string().c_str(), IM_ARRAYSIZE(fullPathBuff));
-						}
-					}
+					strncpy(fullPathBuff, entry.fullPath.c_str(), IM_ARRAYSIZE(fullPathBuff));
+					fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+					cachedPath = std::filesystem::path(fullPathBuff);
+					directoriesDirty = true;
 				}
 			}
-			catch (const std::exception& ex)
-			{
-				cvarManager->log("error : " + std::string(ex.what()));
-				strncpy(fullPathBuff, currentPath.parent_path().string().c_str(), IM_ARRAYSIZE(fullPathBuff));
-			}
-
 			ImGui::EndChild();
 		}
 
@@ -2336,7 +2418,7 @@ void Pluginx64::renderFileExplorer()
 			SaveInCFG();
 			ImGui::CloseCurrentPopup();
 		}
-		
+
 		ImGui::EndPopup();
 	}
 }
@@ -2347,10 +2429,113 @@ void Pluginx64::renderFileExplorerToAddMap(char* filefullPathBuff, std::vector<s
 	ImGui::SetNextWindowSize(ImVec2(600.f, 429.f));
 	if (ImGui::BeginPopupModal("Select map file", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		static char newFolderName[200] = "";
+		struct FileEntry
+		{
+			std::string name;
+			std::string fullPath;
+			bool isDirectory;
+		};
 
+		static char newFolderName[200] = "";
 		static char fullPathBuff[256] = "C:/";
-		std::filesystem::path currentPath = fullPathBuff;
+		static std::vector<std::string> cachedDrives;
+		static std::vector<FileEntry> cachedEntries;
+		static std::filesystem::path cachedPath = std::filesystem::path(fullPathBuff);
+		static bool drivesDirty = true;
+		static bool entriesDirty = true;
+		static std::string lastExtensionsKey;
+
+		const auto makeExtensionsKey = [&extensions]()
+		{
+			std::string key;
+			for (const auto& ext : extensions)
+			{
+				key.append(ext);
+				key.push_back(';');
+			}
+			return key;
+		};
+
+		if (ImGui::IsWindowAppearing())
+		{
+			strncpy(fullPathBuff, MapsFolderPathBuf, IM_ARRAYSIZE(fullPathBuff));
+			fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+			if (std::string(fullPathBuff).empty())
+			{
+				strncpy(fullPathBuff, "C:/", IM_ARRAYSIZE(fullPathBuff));
+			}
+			cachedPath = std::filesystem::path(fullPathBuff);
+			drivesDirty = true;
+			entriesDirty = true;
+			lastExtensionsKey.clear();
+		}
+
+		const std::string currentExtensionsKey = makeExtensionsKey();
+		if (currentExtensionsKey != lastExtensionsKey)
+		{
+			entriesDirty = true;
+			lastExtensionsKey = currentExtensionsKey;
+		}
+
+		auto refreshDrives = [&]()
+		{
+			cachedDrives = GetDrives();
+			drivesDirty = false;
+		};
+
+		auto refreshEntries = [&]()
+		{
+			cachedEntries.clear();
+			try
+			{
+				for (const auto& dir : fs::directory_iterator(cachedPath))
+				{
+					FileEntry entry;
+					entry.name = dir.path().filename().string();
+					entry.fullPath = dir.path().string();
+					entry.isDirectory = dir.is_directory();
+					if (!entry.isDirectory)
+					{
+						std::string fileExtension = dir.path().filename().extension().string();
+						const bool allowed = std::find(extensions.begin(), extensions.end(), fileExtension) != extensions.end();
+						if (!allowed)
+						{
+							continue;
+						}
+					}
+					cachedEntries.push_back(std::move(entry));
+				}
+			}
+			catch (const std::exception& ex)
+			{
+				cvarManager->log("error : " + std::string(ex.what()));
+				if (cachedPath.has_parent_path())
+				{
+					cachedPath = cachedPath.parent_path();
+					strncpy(fullPathBuff, cachedPath.string().c_str(), IM_ARRAYSIZE(fullPathBuff));
+					fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+				}
+			}
+			entriesDirty = false;
+		};
+
+		std::filesystem::path currentPath = std::filesystem::path(fullPathBuff);
+		if (currentPath.empty())
+		{
+			currentPath = "C:/";
+			strncpy(fullPathBuff, currentPath.string().c_str(), IM_ARRAYSIZE(fullPathBuff));
+			fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+		}
+
+		if (drivesDirty)
+		{
+			refreshDrives();
+		}
+		if (entriesDirty || currentPath != cachedPath)
+		{
+			cachedPath = currentPath;
+			refreshEntries();
+		}
 
 		ImGui::BeginChild("##fullPath", ImVec2(ImGui::GetContentRegionAvailWidth(), 35.f), true);
 		{
@@ -2360,29 +2545,34 @@ void Pluginx64::renderFileExplorerToAddMap(char* filefullPathBuff, std::vector<s
 			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3.f);
 			if (ImGui::Selectable("<--"))
 			{
-				strncpy(fullPathBuff, currentPath.parent_path().string().c_str(), IM_ARRAYSIZE(fullPathBuff));
+				const std::filesystem::path parentPath = cachedPath.parent_path();
+				if (!parentPath.empty() && parentPath != cachedPath)
+				{
+					cachedPath = parentPath;
+					strncpy(fullPathBuff, cachedPath.string().c_str(), IM_ARRAYSIZE(fullPathBuff));
+					fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+					entriesDirty = true;
+				}
 			}
 
 			ImGui::NextColumn();
 
-			std::vector<std::string> Drives = GetDrives();
-
 			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvailWidth() - 108.f);
 			if (ImGui::BeginCombo("", fullPathBuff))
 			{
-				for (auto drive : Drives)
+				for (const auto& drive : cachedDrives)
 				{
-					drive += ":/";
-					if (ImGui::Selectable(drive.c_str()))
+					const std::string driveLabel = drive + ":/";
+					if (ImGui::Selectable(driveLabel.c_str()))
 					{
-						strncpy(fullPathBuff, drive.c_str(), IM_ARRAYSIZE(fullPathBuff));
-						currentPath = fullPathBuff;
+						strncpy(fullPathBuff, driveLabel.c_str(), IM_ARRAYSIZE(fullPathBuff));
+						fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+						cachedPath = std::filesystem::path(fullPathBuff);
+						entriesDirty = true;
 					}
 				}
 				ImGui::EndCombo();
 			}
-
-			currentPath = fullPathBuff;
 
 			ImGui::SameLine();
 
@@ -2398,9 +2588,10 @@ void Pluginx64::renderFileExplorerToAddMap(char* filefullPathBuff, std::vector<s
 				{
 					try
 					{
-						std::filesystem::create_directory(currentPath.string() + "/" + newFolderName);
+						std::filesystem::create_directory(cachedPath.string() + "/" + newFolderName);
+						entriesDirty = true;
 					}
-					catch (const std::exception& ex) //manage errors when trying to create a folder in an administrator folder
+					catch (const std::exception& ex)
 					{
 						cvarManager->log(ex.what());
 					}
@@ -2421,50 +2612,34 @@ void Pluginx64::renderFileExplorerToAddMap(char* filefullPathBuff, std::vector<s
 
 		ImGui::BeginChild("##directories", ImVec2(ImGui::GetContentRegionAvailWidth(), ImGui::GetWindowHeight() * 0.75f), true);
 		{
-			try
+			for (const auto& entry : cachedEntries)
 			{
-				for (const auto& dir : fs::directory_iterator(currentPath))
+				if (entry.isDirectory)
 				{
-					std::string dirName = dir.path().filename().string();
-					std::string dirPath = dir.path().string();
-
-					if (dir.is_directory())
+					if (ImGui::Selectable(entry.name.c_str()))
 					{
-						if (ImGui::Selectable(dirName.c_str()))
-						{
-							strncpy(fullPathBuff, dirPath.c_str(), IM_ARRAYSIZE(fullPathBuff));
-						}
+						strncpy(fullPathBuff, entry.fullPath.c_str(), IM_ARRAYSIZE(fullPathBuff));
+						fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+						cachedPath = std::filesystem::path(fullPathBuff);
+						entriesDirty = true;
 					}
-					else
+				}
+				else
+				{
+					const bool isSelected = (std::string(filefullPathBuff) == entry.fullPath);
+					if (ImGui::Selectable(entry.name.c_str(), isSelected))
 					{
-						std::string fileExtension = dir.path().filename().extension().string();
-						auto checkExtensions = [&]() {
-							for (std::string extension : extensions)
-								if (extension == fileExtension)
-									return true;
-							return false;
-						};
-
-						if (checkExtensions())
+						if (isSelected)
 						{
-							bool isSelected = (std::string(filefullPathBuff) == dirPath);
-							if (ImGui::Selectable(dirName.c_str(), isSelected))
-							{
-								if (isSelected)
-									strncpy(filefullPathBuff, "", 256); //reset
-								else
-									strncpy(filefullPathBuff, dirPath.c_str(), 256); //select this file
-							}
+							strncpy(filefullPathBuff, "", 256);
+						}
+						else
+						{
+							strncpy(filefullPathBuff, entry.fullPath.c_str(), 256);
 						}
 					}
 				}
 			}
-			catch (const std::exception& ex)
-			{
-				cvarManager->log("error : " + std::string(ex.what()));
-				strncpy(fullPathBuff, currentPath.parent_path().string().c_str(), IM_ARRAYSIZE(fullPathBuff));
-			}
-
 			ImGui::EndChild();
 		}
 
@@ -2476,8 +2651,9 @@ void Pluginx64::renderFileExplorerToAddMap(char* filefullPathBuff, std::vector<s
 		ImGui::SameLine();
 
 		AlignRightNexIMGUItItem(100.f, 8.f);
-		if (ImGui::Button(SelectText.c_str(), ImVec2(100.f, 30.f))) //"Select"
+		if (ImGui::Button(SelectText.c_str(), ImVec2(100.f, 30.f)))
 		{
+			strncpy(filefullPathBuff, fullPathBuff, 256);
 			ImGui::CloseCurrentPopup();
 		}
 

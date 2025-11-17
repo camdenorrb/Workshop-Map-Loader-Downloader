@@ -199,6 +199,7 @@ std::vector<std::string> Pluginx64::GetJSONLocalMapInfos(std::string jsonFilePat
 void Pluginx64::RefreshMapsFunct(std::string mapsfolders)
 {
 	MapList.clear();
+	InvalidateMapFilterCache();
 	selectedButton = 0;
 	QuickSearch_LastQuery.clear();
 	QuickSearch_Results.clear();
@@ -404,6 +405,49 @@ void Pluginx64::AddMapManually(std::string mapName, std::string mapAuthor, std::
 	AddedMapSccuessfully = true;
 }
 
+void Pluginx64::InvalidateMapFilterCache()
+{
+	MapFilterCacheDirty = true;
+}
+
+void Pluginx64::UpdateMapFilterCache()
+{
+	if (!MapFilterCacheDirty)
+	{
+		return;
+	}
+
+	CachedMissingUpkMaps.clear();
+	CachedPlayableMaps.clear();
+
+	for (auto& map : MapList)
+	{
+		if (map.UpkFile == "NoUpkFound" && map.ZipFile != "EmptyFolder" && map.ZipFile != "NoZipFound")
+		{
+			CachedMissingUpkMaps.push_back(&map);
+		}
+
+		if (map.UpkFile != "NoUpkFound" && map.UpkFile != "EmptyFolder")
+		{
+			CachedPlayableMaps.push_back(&map);
+		}
+	}
+
+	MapFilterCacheDirty = false;
+}
+
+const std::vector<Map*>& Pluginx64::GetMapsNeedingExtraction()
+{
+	UpdateMapFilterCache();
+	return CachedMissingUpkMaps;
+}
+
+const std::vector<Map*>& Pluginx64::GetPlayableMaps()
+{
+	UpdateMapFilterCache();
+	return CachedPlayableMaps;
+}
+
 
 
 
@@ -426,7 +470,7 @@ void Pluginx64::CreateJSONLocalWorkshopInfos(std::string jsonFileName, std::stri
 	JSONFile.close();
 }
 
-void Pluginx64::CreateUnzipBatchFile(std::string destinationPath, std::string zipFilePath)
+std::string Pluginx64::CreateUnzipBatchFile(std::string destinationPath, std::string zipFilePath)
 {
 	std::string filename = BakkesmodPath + "data\\WorkshopMapLoader\\temp\\unzip.bat";
 	std::ofstream BatFile(filename);
@@ -464,7 +508,23 @@ void Pluginx64::CreateUnzipBatchFile(std::string destinationPath, std::string zi
 
 	BatFile.close();
 
-	system(filename.c_str());
+	return filename;
+}
+
+void Pluginx64::RunExternalCommandAsync(std::string command, std::string taskLabel)
+{
+	std::thread([this, command = std::move(command), taskLabel = std::move(taskLabel)]()
+		{
+			if (!taskLabel.empty())
+			{
+				cvarManager->log(taskLabel + " started");
+			}
+			std::system(command.c_str());
+			if (!taskLabel.empty())
+			{
+				cvarManager->log(taskLabel + " finished");
+			}
+		}).detach();
 }
 
 
@@ -770,12 +830,13 @@ void Pluginx64::RLMAPS_DownloadWorkshop(std::string folderpath, RLMAPS_MapResult
 
 	if (unzipMethod == "Bat")
 	{
-		CreateUnzipBatchFile(Workshop_Dl_Path, Folder_Path);
+		const std::string batchFile = CreateUnzipBatchFile(Workshop_Dl_Path, Folder_Path);
+		RunExternalCommandAsync(batchFile, "Extracting " + release.zipName);
 	}
 	else
 	{
 		std::string extractCommand = "powershell.exe Expand-Archive -LiteralPath '" + Folder_Path + "' -DestinationPath '" + Workshop_Dl_Path + "'";
-		system(extractCommand.c_str());
+		RunExternalCommandAsync(extractCommand, "Extracting " + release.zipName);
 	}
 
 
@@ -845,15 +906,16 @@ void Pluginx64::DownloadWorkshopTextures()
 
 	if (unzipMethod == "Bat")
 	{
-		CreateUnzipBatchFile(RLCookedPCConsole_Path.string(), ZipFilePath);
+		const std::string batchFile = CreateUnzipBatchFile(RLCookedPCConsole_Path.string(), ZipFilePath);
+		RunExternalCommandAsync(batchFile, "Workshop textures extraction");
 	}
 	else
 	{
 		std::string extractCommand = "powershell.exe Expand-Archive -LiteralPath '" + ZipFilePath + "' -DestinationPath '" + RLCookedPCConsole_Path.string() + "'";
-		system(extractCommand.c_str());
+		RunExternalCommandAsync(extractCommand, "Workshop textures extraction");
 	}
 
-	cvarManager->log("File Extracted");
+	cvarManager->log("Texture archive extraction scheduled");
 }
 
 std::vector<std::string> Pluginx64::CheckExist_TexturesFiles()
@@ -1221,27 +1283,19 @@ void Pluginx64::eraseAll(std::string& str, const std::string& from) {
 std::vector<std::string> Pluginx64::GetDrives()
 {
 	std::vector<std::string> Drives;
-	int iCounter = 0;
-	int iASCIILetter = (int)'a';
 
 	DWORD dwDrivesMask = GetLogicalDrives();
 
 	if (dwDrivesMask == 0) {
-		printf("Failed to acquire mask of drives.\n");
-		exit(EXIT_FAILURE);
+		cvarManager->log("Failed to acquire mask of drives.");
+		return Drives;
 	}
 
-	printf("Drives available:\n");
-	//extract the drives from the mask using 
-	//logical and-ing with & and bitshift operator <<
-	while (iCounter < 24) {
-		if (dwDrivesMask & (1 << iCounter)) {
-			printf("%c:\\ \n", iASCIILetter + iCounter);
-			char driveLetter = iASCIILetter + iCounter;
-			std::string str(1, driveLetter);
-			Drives.push_back(str);
+	for (int i = 0; i < 26; i++) {
+		if (dwDrivesMask & (1 << i)) {
+			char driveLetter = static_cast<char>('A' + i);
+			Drives.emplace_back(1, driveLetter);
 		}
-		iCounter++;
 	}
 	return Drives;
 }

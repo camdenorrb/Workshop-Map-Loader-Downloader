@@ -131,9 +131,16 @@ public:
 
 	//Local Maps
 	std::vector<Map> MapList;
+	std::vector<Map*> CachedMissingUpkMaps;
+	std::vector<Map*> CachedPlayableMaps;
+	bool MapFilterCacheDirty = true;
 	std::vector<std::string> GetJSONLocalMapInfos(std::string jsonFilePath);
 	void RefreshMapsFunct(std::string mapsfolders);
 	void AddMapManually(std::string mapName, std::string mapAuthor, std::string mapDescription, std::filesystem::path mapsDirectoryPath, std::filesystem::path mapFilePath, std::filesystem::path imagePath);
+	void InvalidateMapFilterCache();
+	void UpdateMapFilterCache();
+	const std::vector<Map*>& GetMapsNeedingExtraction();
+	const std::vector<Map*>& GetPlayableMaps();
 
 	//Display mode
 	int nbTilesPerLine = 5;
@@ -161,7 +168,8 @@ public:
 
 
 	//Related to download
-	void CreateUnzipBatchFile(std::string destinationPath, std::string zipFilePath);
+	std::string CreateUnzipBatchFile(std::string destinationPath, std::string zipFilePath);
+	void RunExternalCommandAsync(std::string command, std::string taskLabel);
 	void CreateJSONLocalWorkshopInfos(std::string jsonFileName, std::string workshopMapPath, std::string mapTitle, std::string mapAuthor, std::string mapDescription, std::string mapPreviewUrl);
 	bool IsRetrievingWorkshopFiles = false;
 	bool DownloadFailed = false;
@@ -236,7 +244,7 @@ public:
 	void renderProgressBar(float value, float maxValue, ImVec2 pos, ImVec2 size, ImColor colorBackground, ImColor colorProgress, const char* label);
 
 	//Popups
-	void renderReleases(RLMAPS_MapResult mapResult);
+	void renderReleases(const RLMAPS_MapResult& mapResult);
 	void renderNewUpdatePopup();
 	void renderInfoPopup(const char* popupName, const char* label);
 	void renderYesNoPopup(const char* popupName, const char* label, std::function<void()> yesFunc, std::function<void()> noFunc);
