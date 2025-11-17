@@ -115,7 +115,7 @@ public:
 	//Variables
 	std::string BakkesmodPath;
 	std::string MapsFolderPath;
-	std::string PluginVersion = "1.15.3";
+	std::string PluginVersion = "1.15.4";
 	static bool FR;
 	std::string unzipMethod = "Bat";
 	bool HasSeeNewUpdateAlert;

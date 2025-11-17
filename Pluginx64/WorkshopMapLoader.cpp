@@ -2,7 +2,7 @@
 #include "WorkshopMapLoader.h"
 
 
-BAKKESMOD_PLUGIN(Pluginx64, "Workshop Map Loader & Downloader", "1.15.3", 0)
+BAKKESMOD_PLUGIN(Pluginx64, "Workshop Map Loader & Downloader", "1.15.4", 0)
 
 
 namespace
@@ -107,7 +107,7 @@ void Pluginx64::onLoad()
 		nbTilesPerLine = 6;
 		ControllerSensitivity = 10;
 		ControllerScrollSensitivity = 10;
-		PluginVersion = "1.15.2";
+		PluginVersion = "1.15.4";
 		EnableAntiFreezeFix = false;
 
 		strncpy(MapsFolderPathBuf, MapsFolderPath.c_str(), IM_ARRAYSIZE(MapsFolderPathBuf)); //Make  MapsFolderPathBuf = MapsFolderPath
