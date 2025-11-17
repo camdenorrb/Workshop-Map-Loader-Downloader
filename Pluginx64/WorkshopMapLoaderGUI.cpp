@@ -216,12 +216,12 @@ void Pluginx64::Render()
 		CloseText = "Close";
 		DontAskText = "Don't ask me again";
 
-		//File Explorer
-		NewFolderText = "New Folder";
-		ConfirmText = "Confirm";
-		SelectText = "Select";
-	}
-	else
+	//File Explorer
+	NewFolderText = "New Folder";
+	ConfirmText = "Confirm";
+	SelectText = "Select";
+}
+else
 	{
 		//Menubar
 		SettingsText = "Parametres";
@@ -320,6 +320,7 @@ void Pluginx64::Render()
 		ConfirmText = "Confirmer";
 		SelectText = "Selectionner";
 	}
+	localizationBlockMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - localizationStart).count();
 	localizationBlockMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - localizationStart).count();
 
 
@@ -497,8 +498,6 @@ void Pluginx64::Render()
 
 	double mapTabMs = 0.0;
 	double searchTabMs = 0.0;
-	double announcementTabMs = 0.0;
-	double changelogTabMs = 0.0;
 	double tabBarMs = 0.0;
 
 	if (ImGui::BeginTabBar("TabBar"))
@@ -811,8 +810,6 @@ void Pluginx64::Render()
 	lastRenderTabBarMs = tabBarMs;
 	lastRenderMapTabMs = mapTabMs;
 	lastRenderSearchTabMs = searchTabMs;
-	lastRenderAnnouncementTabMs = announcementTabMs;
-	lastRenderChangelogTabMs = changelogTabMs;
 	if (logWindowRender)
 	{
 		std::string msg = "[WML] Render window summary open=" + std::string(isWindowOpen_ ? "true" : "false")
@@ -830,8 +827,8 @@ void Pluginx64::Render()
 			+ " tabBarMs=" + std::to_string(tabBarMs)
 			+ " mapTabMs=" + std::to_string(mapTabMs)
 			+ " searchTabMs=" + std::to_string(searchTabMs)
-			+ " announcementTabMs=" + std::to_string(announcementTabMs)
-			+ " changelogTabMs=" + std::to_string(changelogTabMs);
+			+ " announcementTabMs=" + std::to_string(lastRenderAnnouncementTabMs)
+			+ " changelogTabMs=" + std::to_string(lastRenderChangelogTabMs);
 		cvarManager->log(msg);
 		nextWindowRenderLog = windowRenderStart + std::chrono::milliseconds(2000);
 	}
@@ -2135,6 +2132,8 @@ void Pluginx64::renderDownloadTexturesPopup(std::vector<std::string> missingText
 
 void Pluginx64::renderNewUpdatePopup()
 {
+	double announcementTabMs = 0.0;
+	double changelogTabMs = 0.0;
 	static bool french = false;
 	if (ImGui::BeginPopupModal("New Update", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
