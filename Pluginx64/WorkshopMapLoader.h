@@ -262,8 +262,8 @@ public:
 
 
 	void renderMaps(Gamepad controller);
-	void renderMaps_DisplayMode_0(const Map& map);
-	void renderMaps_DisplayMode_1(const Map& map, float buttonWidth);
+	void renderMaps_DisplayMode_0(const Map& map, int mapIndex, float childWidth);
+	void renderMaps_DisplayMode_1(const Map& map, float buttonWidth, int mapIndex);
 
 	void RLMAPS_RenderAResult(int i, ImDrawList* drawList, char mapspath[200]);
 	void RLMAPS_renderSearchWorkshopResults(char mapspath[200]);
