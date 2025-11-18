@@ -1,0 +1,23 @@
+{
+	"name": "Workshop Map Loader (Windows MSBuild)",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"context": ".."
+	},
+	"remoteUser": "ContainerUser",
+	"workspaceFolder": "C:/workspaces/Workshop-Map-Loader-Downloader",
+	"customizations": {
+		"vscode": {
+			"settings": {
+				"terminal.integrated.defaultProfile.windows": "PowerShell",
+				"cmake.configureOnOpen": false
+			},
+			"extensions": [
+				"ms-vscode.cpptools",
+				"ms-vscode.cpptools-extension-pack",
+				"ms-vscode.powershell"
+			]
+		}
+	},
+	"features": {}
+}

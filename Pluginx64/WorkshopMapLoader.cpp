@@ -2,7 +2,7 @@
 #include "WorkshopMapLoader.h"
 
 
-BAKKESMOD_PLUGIN(Pluginx64, "Workshop Map Loader & Downloader", "1.15.3", 0)
+BAKKESMOD_PLUGIN(Pluginx64, "Workshop Map Loader & Downloader", "1.15.4", 0)
 
 
 namespace
@@ -27,6 +27,7 @@ void Pluginx64::onLoad()
 
 	std::string RLWin64_Path = std::filesystem::current_path().string();
 	RLCookedPCConsole_Path = RLWin64_Path.substr(0, RLWin64_Path.length() - 14) + "TAGame\\CookedPCConsole";
+	textureInventory.SetCookedDirectory(RLCookedPCConsole_Path);
 
 	std::string Data_WorkshopMapLoader_Path = BakkesmodPath + "data\\WorkshopMapLoader\\";
 
@@ -107,7 +108,7 @@ void Pluginx64::onLoad()
 		nbTilesPerLine = 6;
 		ControllerSensitivity = 10;
 		ControllerScrollSensitivity = 10;
-		PluginVersion = "1.15.2";
+		PluginVersion = "1.15.4";
 		EnableAntiFreezeFix = false;
 
 		strncpy(MapsFolderPathBuf, MapsFolderPath.c_str(), IM_ARRAYSIZE(MapsFolderPathBuf)); //Make  MapsFolderPathBuf = MapsFolderPath
@@ -115,8 +116,219 @@ void Pluginx64::onLoad()
 	}
 
 
+	ApplyLocalization(FR);
 }
 
+void Pluginx64::UpdateLocalizationTexts(bool french)
+{
+	if (!french)
+	{
+		//Menubar
+		SettingsText = "Settings";
+		MultiplayerText = "Multiplayer";
+		LastUpdateText = "Last Update";
+		JoinCWGText = "Join Community Workshop Games discord server :";
+		OpenCPCCText = "Open CookedPCConsole Directory";
+		NoMapsCanBeJoinText = "No maps can be joined";
+		MapsJoinableText = "Maps joinable";
+		DlTexturesText = "Download Textures";
+		LanguageText = "Language";
+		ExtractMethodText = "Extract Method";
+		WarningText = "Warning :";
+
+		//Controller settings
+		ControllerText = "Controller";
+		UseControllerText = "Use Controller";
+		ControllsText = "Controlls";
+		ScrollSensitivityText = "Scroll Sensitivity";
+		SensitivityText = "Sensitivity";
+		ControllsLitText[0] = "Left Thumb + Right Thumb : open/close the menu";
+		ControllsLitText[1] = "DPAD arrows : navigate through the maps";
+		ControllsLitText[2] = "Left joystick : move the cursor";
+		ControllsLitText[3] = "Right joystick : scroll";
+		ControllsLitText[4] = "LB/L1 : click";
+		ControllsLitText[5] = "B/O : close the menu";
+
+		//1st Tab
+		Tab1MapLoaderText = "Map Loader";
+		Label1Text = "Put the path of the maps folder :";
+		SelectMapsFolderText = "Select maps folder";
+		RefreshMapsButtonText = "Refresh Maps";
+		SavePathText = "Save Path";
+		MapsPerLineText = "Maps Per Line :";
+		//context menu strip
+		OpenMapDirText = "Open map directory";
+		DeleteMapText = "Delete map";
+
+		//LauchMode Popup
+		CancelText = "Cancel";
+
+		//Add Map
+		AddMapText = "Add Map";
+		NameText = "Name :";
+		AuthorText = "Author :";
+		MapFilePathText = "Map File Path :";
+		ImagePathText = "Image Path :";
+		SelectFileText = "Select File";
+		FieldEmptyText = "A field is empty !";
+		ConfirmLabelText = "Do you really want to add this map ?";
+		MapAddedSuccessfullyText = "Map added successfully !";
+
+		//2nd Tab
+		DownloadButtonText = "Download";
+		Label3Text = "Search A Workshop :";
+		SearchButtonText = "Search";
+		SearchingText = "Searching...";
+		WorkshopsFoundText = "Workshops Found :";
+		BrowseMapsText = "Browse Maps";
+		Tab3SearchWorkshopText = "Search Workshop (rocketleaguemaps.us)";
+
+
+		//Search Result
+		ResultByText = "By ";
+		ResultSizeText = "Size : ";
+		DownloadMapButtonText = "Download Map";
+
+		//Warnings
+		DirNotExistText = "This directory is not valid !";
+		DownloadFailedText = "Download Failed !" + DownloadFailedErrorText;
+		WantToDawnloadText = "Do you really want to download?\nYou'll not be able to cancel if you start it.";
+		YESButtonText = "YES";
+		NOButtonText = "NO";
+		IsDownloadDingWarningText = "A download is already running !\nYou cannot download 2 workshops at the same time.";
+		PathSavedText = "Path saved successfully !";
+
+		//ExtractMapFiles
+		EMFMessageText1 = "The map isn't extracted from ";
+		EMFMessageText2 = "\nChoose an extract method (you need to click on refresh maps after extracting) :";
+		EMFStillDoesntWorkText = "Still not working";
+		//ExtractManually
+		EMLabelText = "If both of the extract methods didn't work, you need to extract the files manually of ";
+
+		//Download Texutures
+		DLTLabel1Text = "It seems like the workshop textures aren't installed in " + RLCookedPCConsole_Path.string();
+		DLTLabel2Text = "You can still play without the workshop textures but some maps will have some white/weird textures.";
+		DLTMissingFilesText = "Missing Files";
+		DLTTexturesInstalledText = "Workshop textures installed !";
+		CloseText = "Close";
+		DontAskText = "Don't ask me again";
+
+		//File Explorer
+		NewFolderText = "New Folder";
+		ConfirmText = "Confirm";
+		SelectText = "Select";
+	}
+	else
+	{
+		//Menubar
+		SettingsText = "Parametres";
+		MultiplayerText = "Multijoueur";
+		LastUpdateText = "Derniere Maj";
+		JoinCWGText = "Rejoins le serveur discord Community Workshop Games :";
+		OpenCPCCText = "Ouvrir le dossier CookedPCConsole";
+		NoMapsCanBeJoinText = "Aucune map ne peut etre rejoint";
+		MapsJoinableText = "Maps rejoignables";
+		DlTexturesText = "Telecharger les textures";
+		LanguageText = "Langue";
+		ExtractMethodText = "Methode d'extraction";
+		WarningText = "Attention :";
+
+		//Controller settings
+		ControllerText = "Manette";
+		UseControllerText = "Activer La Manette";
+		ControllsText = "Commandes";
+		ScrollSensitivityText = "Sensibilite du defilement";
+		SensitivityText = "Sensibilite";
+		ControllsLitText[0] = "Pouce Gauche + Pouce Droit : ouvrir/fermer le menu";
+		ControllsLitText[1] = "Fleches : naviguer dans les maps";
+		ControllsLitText[2] = "Joystick Gauche : bouger la souris";
+		ControllsLitText[3] = "Joystick Droit : faire defiler";
+		ControllsLitText[4] = "LB/L1 : cliquer";
+		ControllsLitText[5] = "B/O : fermer le menu";
+
+		//1st Tab
+		Tab1MapLoaderText = "Charger Map";
+		Label1Text = "Mets le chemin du dossier des maps :";
+		SelectMapsFolderText = "Choisir Dossier Des Maps";
+		RefreshMapsButtonText = "Rafraichir Les Maps";
+		SavePathText = "Sauvegarder Le Chemin";
+		MapsPerLineText = "Maps Par Ligne :";
+		//context menu strip
+		OpenMapDirText = "Ouvrir le dossier de la map";
+		DeleteMapText = "Supprimer la map";
+
+		//LauchMode Popup
+		CancelText = "Annuler";
+
+		//Add Map
+		AddMapText = "Ajouter Map";
+		NameText = "Nom :";
+		AuthorText = "Auteur :";
+		MapFilePathText = "Fichier De La Map :";
+		ImagePathText = "Image :";
+		SelectFileText = "Parcourir";
+		FieldEmptyText = "Un champ est vide !";
+		ConfirmLabelText = "Veux-tu vraiment ajouter cette map ?";
+		MapAddedSuccessfullyText = "Map ajoute avec succes !";
+
+		//2nd Tab
+		DownloadButtonText = "Telecharger";
+		Label3Text = "Rechercher Un Workshop :";
+		SearchButtonText = "Rechercher";
+		SearchingText = "Recherche en cours...";
+		WorkshopsFoundText = "Workshops Trouves :";
+		BrowseMapsText = "Parcourir Les Maps";
+		Tab3SearchWorkshopText = "Rechercher Workshop (rocketleaguemaps.us)";
+
+		//Search Result
+		ResultByText = "Par ";
+		ResultSizeText = "Taille : ";
+		DownloadMapButtonText = "Telecharger La Map";
+
+		//Warnings
+		DirNotExistText = "Ce chemin n'est pas valide !";
+		DownloadFailedText = "Le telechargement a echoue !" + DownloadFailedErrorText;
+		WantToDawnloadText = "Veux-tu vraiment telecharger?\nTu ne pourras plus l'annuler si tu le commence.";
+		YESButtonText = "OUI";
+		NOButtonText = "NON";
+		IsDownloadDingWarningText = "Un telechargement est deja en cours !\nTu ne peux pas telecharger 2 workshops en meme temps.";
+		PathSavedText = "Le chemin a ete sauvegarde !";
+
+		//ExtractMapFiles
+		EMFMessageText1 = "La map n'est pas extrait de ";
+		EMFMessageText2 = "\nChoisis une methode d'extraction (rafraichis les maps apres l'extraction) :";
+		EMFStillDoesntWorkText = "Ne fonctionne pas";
+		//ExtractManually
+		EMLabelText = "Si les deux methodes d'extraction n'ont pas fonctionne, tu dois extraire les fichiers manuellement de ";
+
+		//Download Texutures
+		DLTLabel1Text = "Les textures des workshops ne semblent pas etre installees dans " + RLCookedPCConsole_Path.string();
+		DLTLabel2Text = "Tu peux toujours jouer sans mais des maps auront des textures blanches/bizarres.";
+		DLTMissingFilesText = "Fichiers Manquants";
+		DLTTexturesInstalledText = "Textures des workshops installees!";
+		CloseText = "Fermer";
+		DontAskText = "Ne plus me demander";
+
+		//File Explorer
+		NewFolderText = "Nouv. Dossier";
+		ConfirmText = "Confirmer";
+		SelectText = "Selectionner";
+	}
+}
+
+void Pluginx64::ApplyLocalization(bool french)
+{
+	if (!localizationService.ShouldApply(french))
+	{
+		lastRenderLocalizationMs = 0.0;
+		return;
+	}
+
+	const auto localizationStart = std::chrono::steady_clock::now();
+	UpdateLocalizationTexts(french);
+	localizationService.MarkApplied(french);
+	lastRenderLocalizationMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - localizationStart).count();
+}
 
 
 void Pluginx64::checkOpenMenuWithController(CanvasWrapper canvas)
@@ -199,7 +411,11 @@ std::vector<std::string> Pluginx64::GetJSONLocalMapInfos(std::string jsonFilePat
 void Pluginx64::RefreshMapsFunct(std::string mapsfolders)
 {
 	MapList.clear();
+	InvalidateMapFilterCache();
 	selectedButton = 0;
+	QuickSearch_LastQuery.clear();
+	QuickSearch_Results.clear();
+	QuickSearch_Searching = false;
 
 	std::vector<std::filesystem::path> MapsDirectories;
 
@@ -330,6 +546,7 @@ void Pluginx64::RefreshMapsFunct(std::string mapsfolders)
 		}
 
 
+		UpdateMapDisplayCache(map);
 		MapList.push_back(map);
 		cvarManager->log("");
 	}
@@ -401,6 +618,82 @@ void Pluginx64::AddMapManually(std::string mapName, std::string mapAuthor, std::
 	AddedMapSccuessfully = true;
 }
 
+void Pluginx64::UpdateMapDisplayCache(Map& map)
+{
+	if (!map.displayCacheDirty)
+	{
+		return;
+	}
+
+	if (map.JsonFile == "NoInfos")
+	{
+		map.displayName = replace(map.Folder.filename().string(), *"_", *" ");
+		map.displayDescription.clear();
+	}
+	else
+	{
+		map.displayName = map.mapName;
+		std::string description = map.mapDescription;
+		if (description.length() > 150)
+		{
+			description.insert(145, "\n");
+			if (description.length() > 280)
+			{
+				description.erase(280);
+				description.append("...");
+			}
+		}
+		map.displayDescription = std::move(description);
+	}
+
+	map.gridDisplayName.clear();
+	map.gridDisplayWidth = -1.f;
+	map.displayCacheDirty = false;
+}
+
+void Pluginx64::InvalidateMapFilterCache()
+{
+	MapFilterCacheDirty = true;
+}
+
+void Pluginx64::UpdateMapFilterCache()
+{
+	if (!MapFilterCacheDirty)
+	{
+		return;
+	}
+
+	CachedMissingUpkMaps.clear();
+	CachedPlayableMaps.clear();
+
+	for (auto& map : MapList)
+	{
+		if (map.UpkFile == "NoUpkFound" && map.ZipFile != "EmptyFolder" && map.ZipFile != "NoZipFound")
+		{
+			CachedMissingUpkMaps.push_back(&map);
+		}
+
+		if (map.UpkFile != "NoUpkFound" && map.UpkFile != "EmptyFolder")
+		{
+			CachedPlayableMaps.push_back(&map);
+		}
+	}
+
+	MapFilterCacheDirty = false;
+}
+
+const std::vector<Map*>& Pluginx64::GetMapsNeedingExtraction()
+{
+	UpdateMapFilterCache();
+	return CachedMissingUpkMaps;
+}
+
+const std::vector<Map*>& Pluginx64::GetPlayableMaps()
+{
+	UpdateMapFilterCache();
+	return CachedPlayableMaps;
+}
+
 
 
 
@@ -423,7 +716,7 @@ void Pluginx64::CreateJSONLocalWorkshopInfos(std::string jsonFileName, std::stri
 	JSONFile.close();
 }
 
-void Pluginx64::CreateUnzipBatchFile(std::string destinationPath, std::string zipFilePath)
+std::string Pluginx64::CreateUnzipBatchFile(std::string destinationPath, std::string zipFilePath)
 {
 	std::string filename = BakkesmodPath + "data\\WorkshopMapLoader\\temp\\unzip.bat";
 	std::ofstream BatFile(filename);
@@ -445,7 +738,7 @@ void Pluginx64::CreateUnzipBatchFile(std::string destinationPath, std::string zi
 	BatFile << "exit /b\n";
 	BatFile << "\n";
 	BatFile << ":UnZipFile <ExtractTo> <newzipfile>\n";
-	BatFile << "set vbs=\" % temp % \_.vbs\"\n";
+	BatFile << "set vbs=\" % temp % _.vbs\"\n";
 	BatFile << "if exist %vbs% del /f /q %vbs%\n";
 	BatFile << ">%vbs%  echo Set fso = CreateObject(\"Scripting.FileSystemObject\")\n";
 	BatFile << ">>%vbs% echo If NOT fso.FolderExists(%1) Then\n";
@@ -461,7 +754,23 @@ void Pluginx64::CreateUnzipBatchFile(std::string destinationPath, std::string zi
 
 	BatFile.close();
 
-	system(filename.c_str());
+	return filename;
+}
+
+void Pluginx64::RunExternalCommandAsync(std::string command, std::string taskLabel)
+{
+	std::thread([this, command = std::move(command), taskLabel = std::move(taskLabel)]()
+		{
+			if (!taskLabel.empty())
+			{
+				cvarManager->log(taskLabel + " started");
+			}
+			std::system(command.c_str());
+			if (!taskLabel.empty())
+			{
+				cvarManager->log(taskLabel + " finished");
+			}
+		}).detach();
 }
 
 
@@ -493,19 +802,10 @@ void Pluginx64::GetResults(std::string keyWord, int IndexPage)
 	RLMAPS_NumberOfMapsFound = maps.size();
 
 
+	RLMAPS_MapResultList.reserve(maps.size());
 	for (int index = 0; index < maps.size(); ++index)
 	{
-		//GetMapResult(maps, index);
-		std::thread t2(&Pluginx64::GetMapResult, this, maps, index);
-		t2.detach();
-
-
-		Sleep(100);
-	}
-
-	while (RLMAPS_MapResultList.size() != maps.size())
-	{
-		Sleep(10);
+		GetMapResult(maps, index);
 	}
 
 	RLMAPS_Searching = false;
@@ -634,19 +934,33 @@ void Pluginx64::GetMapSize(std::string donwloadUrl)
 
 
 //Quick search ctrl+f
-std::vector<Map> Pluginx64::QuickSearch_GetMapList(std::string keyWord)
+void Pluginx64::UpdateQuickSearchResults(const std::string& keyWord)
 {
-	std::vector<Map> List;
-	for (auto map : MapList)
+	QuickSearch_LastQuery = keyWord;
+	QuickSearch_Results.clear();
+	if (keyWord.empty())
+	{
+		QuickSearch_Searching = false;
+		return;
+	}
+
+	QuickSearch_Searching = true;
+	QuickSearch_Results = QuickSearch_GetMapList(keyWord);
+}
+
+std::vector<Map*> Pluginx64::QuickSearch_GetMapList(const std::string& keyWord)
+{
+	std::vector<Map*> List;
+	std::string loweredKeyword = keyWord;
+	std::transform(loweredKeyword.begin(), loweredKeyword.end(), loweredKeyword.begin(), ::tolower);
+	for (auto& map : MapList)
 	{
 		std::string mapName = map.mapName;
+		std::transform(mapName.begin(), mapName.end(), mapName.begin(), ::tolower);
 
-		std::transform(mapName.begin(), mapName.end(), mapName.begin(), ::tolower); //transform a string to lowercase
-		std::transform(keyWord.begin(), keyWord.end(), keyWord.begin(), ::tolower); //transform a string to lowercase
-
-		if (mapName.find(keyWord) != std::string::npos) //if keyWord is in the mapNameToLower
+		if (mapName.find(loweredKeyword) != std::string::npos)
 		{
-			List.push_back(map);
+			List.push_back(&map);
 		}
 	}
 	return List;
@@ -762,12 +1076,13 @@ void Pluginx64::RLMAPS_DownloadWorkshop(std::string folderpath, RLMAPS_MapResult
 
 	if (unzipMethod == "Bat")
 	{
-		CreateUnzipBatchFile(Workshop_Dl_Path, Folder_Path);
+		const std::string batchFile = CreateUnzipBatchFile(Workshop_Dl_Path, Folder_Path);
+		RunExternalCommandAsync(batchFile, "Extracting " + release.zipName);
 	}
 	else
 	{
 		std::string extractCommand = "powershell.exe Expand-Archive -LiteralPath '" + Folder_Path + "' -DestinationPath '" + Workshop_Dl_Path + "'";
-		system(extractCommand.c_str());
+		RunExternalCommandAsync(extractCommand, "Extracting " + release.zipName);
 	}
 
 
@@ -837,29 +1152,27 @@ void Pluginx64::DownloadWorkshopTextures()
 
 	if (unzipMethod == "Bat")
 	{
-		CreateUnzipBatchFile(RLCookedPCConsole_Path.string(), ZipFilePath);
+		const std::string batchFile = CreateUnzipBatchFile(RLCookedPCConsole_Path.string(), ZipFilePath);
+		RunExternalCommandAsync(batchFile, "Workshop textures extraction");
 	}
 	else
 	{
 		std::string extractCommand = "powershell.exe Expand-Archive -LiteralPath '" + ZipFilePath + "' -DestinationPath '" + RLCookedPCConsole_Path.string() + "'";
-		system(extractCommand.c_str());
+		RunExternalCommandAsync(extractCommand, "Workshop textures extraction");
 	}
 
-	cvarManager->log("File Extracted");
+	cvarManager->log("Texture archive extraction scheduled");
+	InvalidateMissingTexturesCache();
 }
 
-std::vector<std::string> Pluginx64::CheckExist_TexturesFiles()
+std::vector<std::string> Pluginx64::GetMissingTexturesSnapshot()
 {
-	std::vector<std::string> missingFiles;
-	for (auto textureFile : WorkshopTexturesFilesList)
-	{
-		if (!Directory_Or_File_Exists(RLCookedPCConsole_Path.string() + "\\" + textureFile))
-		{
-			missingFiles.push_back(textureFile);
-		}
-	}
+	return textureInventory.GetMissingTexturesSnapshot();
+}
 
-	return missingFiles;
+void Pluginx64::InvalidateMissingTexturesCache()
+{
+	textureInventory.InvalidateCache();
 }
 
 
@@ -920,6 +1233,8 @@ std::string Pluginx64::convertToMB(std::string numberToConvert)
 		std::string result = numberToConvert + " Bytes"; //insert a ","
 		return result;
 	}
+
+	return numberToConvert + " Bytes";
 }
 
 bool Pluginx64::Directory_Or_File_Exists(const fs::path& p, fs::file_status s)
@@ -981,10 +1296,9 @@ void Pluginx64::renameFileToUPK(std::filesystem::path filePath)
 	if (!EnableAntiFreezeFix)
 		return;
 
-	for (std::string texture : WorkshopTexturesFilesList)
+	if (textureInventory.IsManagedTexture(filePath))
 	{
-		if (filePath.filename().string() == texture)
-			return;
+		return;
 	}
 
 	std::string UDKPath = UdkInDirectory(filePath.string());
@@ -1211,27 +1525,19 @@ void Pluginx64::eraseAll(std::string& str, const std::string& from) {
 std::vector<std::string> Pluginx64::GetDrives()
 {
 	std::vector<std::string> Drives;
-	int iCounter = 0;
-	int iASCIILetter = (int)'a';
 
 	DWORD dwDrivesMask = GetLogicalDrives();
 
 	if (dwDrivesMask == 0) {
-		printf("Failed to acquire mask of drives.\n");
-		exit(EXIT_FAILURE);
+		cvarManager->log("Failed to acquire mask of drives.");
+		return Drives;
 	}
 
-	printf("Drives available:\n");
-	//extract the drives from the mask using 
-	//logical and-ing with & and bitshift operator <<
-	while (iCounter < 24) {
-		if (dwDrivesMask & (1 << iCounter)) {
-			printf("%c:\\ \n", iASCIILetter + iCounter);
-			char driveLetter = iASCIILetter + iCounter;
-			std::string str(1, driveLetter);
-			Drives.push_back(str);
+	for (int i = 0; i < 26; i++) {
+		if (dwDrivesMask & (1 << i)) {
+			char driveLetter = static_cast<char>('A' + i);
+			Drives.emplace_back(1, driveLetter);
 		}
-		iCounter++;
 	}
 	return Drives;
 }

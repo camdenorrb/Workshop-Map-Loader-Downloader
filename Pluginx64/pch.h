@@ -14,6 +14,7 @@
 #define WIN32_LEAN_AND_MEAN
 #define _CRT_SECURE_NO_WARNINGS
 #include "bakkesmod/plugin/bakkesmodplugin.h"
+#include <shellapi.h>
 #include <cpr/cpr.h>
 #include <curl/curl.h>
 #include <json/json.h>

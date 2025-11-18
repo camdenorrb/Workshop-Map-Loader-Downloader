@@ -5,6 +5,9 @@
 #include "bakkesmod/plugin/PluginSettingsWindow.h"
 
 #include "Gamepad.h"
+#include "services/LocalizationService.h"
+#include "services/TextureInventory.h"
+#include <chrono>
 
 //#include <WinUser.h>
 
@@ -14,6 +17,11 @@ struct Map
 	std::string mapName;
 	std::string mapDescription;
 	std::string mapAuthor;
+	std::string displayName;
+	std::string displayDescription;
+	std::string gridDisplayName;
+	float gridDisplayWidth = -1.f;
+	bool displayCacheDirty = true;
 
 	std::filesystem::path Folder; //Map folder
 	std::filesystem::path UpkFile; //Map(.upk) in the map directory
@@ -88,6 +96,25 @@ public:
 
 	ImVec2 MapButtonChild_TopPos;
 	std::vector<mapButtonPos> mapButtonList;
+	std::vector<uint32_t> mapButtonGeometryFrame;
+	uint32_t mapButtonFrameMarker = 0;
+	double lastRenderMapsDurationMs = 0.0;
+	double lastRenderMapsMissingMs = 0.0;
+	double lastRenderMapsPlayableMs = 0.0;
+	double lastRenderMapsControllerMs = 0.0;
+	int lastRenderMapsMissingCount = 0;
+	int lastRenderMapsPlayableCount = 0;
+	bool lastRenderMapsQuickSearch = false;
+	double lastRenderControllerMs = 0.0;
+	double lastRenderLocalizationMs = 0.0;
+	double lastRenderMenuBarMs = 0.0;
+	double lastRenderTabBarMs = 0.0;
+	double lastRenderMapTabMs = 0.0;
+	double lastRenderSearchTabMs = 0.0;
+	double lastRenderAnnouncementTabMs = 0.0;
+	double lastRenderChangelogTabMs = 0.0;
+	LocalizationService localizationService;
+	TextureInventory textureInventory;
 	int selectedButton = 0;
 
 	bool UseController = false;
@@ -98,16 +125,14 @@ public:
 
 
 	//Textures
-	std::vector<std::string> WorkshopTexturesFilesList =
-	{
-		"EditorLandscapeResources.upk", "EditorMaterials.upk", "EditorMeshes.upk", "EditorResources.upk", "Engine_MI_Shaders.upk", "EngineBuildings.upk", "EngineDebugMaterials.upk",
-		"EngineMaterials.upk", "EngineResources.upk", "EngineVolumetrics.upk", "MapTemplateIndex.upk", "MapTemplates.upk", "mods.upk", "NodeBuddies.upk"
-	};
 	bool IsDownloading_WorkshopTextures;
-	std::vector<std::string> CheckExist_TexturesFiles();
 	void DownloadWorkshopTextures();
 	int Download_Textrures_Progress;
 	int DownloadTextrures_ProgressDisplayed;
+	std::vector<std::string> GetMissingTexturesSnapshot();
+	void InvalidateMissingTexturesCache();
+	void UpdateLocalizationTexts(bool french);
+	void ApplyLocalization(bool french);
 
 
 	
@@ -115,7 +140,7 @@ public:
 	//Variables
 	std::string BakkesmodPath;
 	std::string MapsFolderPath;
-	std::string PluginVersion = "1.15.3";
+	std::string PluginVersion = "1.15.4";
 	static bool FR;
 	std::string unzipMethod = "Bat";
 	bool HasSeeNewUpdateAlert;
@@ -131,9 +156,18 @@ public:
 
 	//Local Maps
 	std::vector<Map> MapList;
+	std::vector<Map*> CachedMissingUpkMaps;
+	std::vector<Map*> CachedPlayableMaps;
+	bool MapFilterCacheDirty = true;
 	std::vector<std::string> GetJSONLocalMapInfos(std::string jsonFilePath);
 	void RefreshMapsFunct(std::string mapsfolders);
 	void AddMapManually(std::string mapName, std::string mapAuthor, std::string mapDescription, std::filesystem::path mapsDirectoryPath, std::filesystem::path mapFilePath, std::filesystem::path imagePath);
+	void InvalidateMapFilterCache();
+	void UpdateMapFilterCache();
+	const std::vector<Map*>& GetMapsNeedingExtraction();
+	const std::vector<Map*>& GetPlayableMaps();
+	void UpdateMapDisplayCache(Map& map);
+	void EnsureGridTitleCache(Map& map, float buttonWidth);
 
 	//Display mode
 	int nbTilesPerLine = 5;
@@ -161,7 +195,8 @@ public:
 
 
 	//Related to download
-	void CreateUnzipBatchFile(std::string destinationPath, std::string zipFilePath);
+	std::string CreateUnzipBatchFile(std::string destinationPath, std::string zipFilePath);
+	void RunExternalCommandAsync(std::string command, std::string taskLabel);
 	void CreateJSONLocalWorkshopInfos(std::string jsonFileName, std::string workshopMapPath, std::string mapTitle, std::string mapAuthor, std::string mapDescription, std::string mapPreviewUrl);
 	bool IsRetrievingWorkshopFiles = false;
 	bool DownloadFailed = false;
@@ -212,7 +247,10 @@ public:
 	bool isQuickSearchDisplayed = false;
 	bool QuickSearch_Searching = false;
 	char QuickSearch_KeyWordBuf[128];
-	std::vector<Map> QuickSearch_GetMapList(std::string keyWord);
+	std::vector<Map*> QuickSearch_GetMapList(const std::string& keyWord);
+	void UpdateQuickSearchResults(const std::string& keyWord);
+	std::vector<Map*> QuickSearch_Results;
+	std::string QuickSearch_LastQuery;
 
 	void Render() override;
 	std::string GetMenuName() override;
@@ -228,20 +266,21 @@ public:
 	void renderImageButton(ImTextureID user_texture_id, ImVec2 size, std::function<void()> function);
 	void CenterNexIMGUItItem(float itemWidth);
 	void AlignRightNexIMGUItItem(float itemWidth, float borderGap);
-	std::string LimitTextSize(std::string str, float maxTextSize); //à mettre dans utils
+	std::string LimitTextSize(std::string str, float maxTextSize); // mettre dans utils
 
 	void renderProgressBar(float value, float maxValue, ImVec2 pos, ImVec2 size, ImColor colorBackground, ImColor colorProgress, const char* label);
 
 	//Popups
-	void renderReleases(RLMAPS_MapResult mapResult);
+	void renderReleases(const RLMAPS_MapResult& mapResult);
 	void renderNewUpdatePopup();
 	void renderInfoPopup(const char* popupName, const char* label);
 	void renderYesNoPopup(const char* popupName, const char* label, std::function<void()> yesFunc, std::function<void()> noFunc);
 	void renderFolderErrorPopup();
-	void renderExtractMapFilesPopup(Map curMap);
+	void renderExtractMapFilesPopup(const Map& curMap);
 	void renderAcceptDownload();
 	void renderDownloadFailedPopup();
-	void renderDownloadTexturesPopup(std::vector<std::string> missingTextureFiles);
+	void renderDownloadTexturesPopup(const std::vector<std::string>& missingTextureFiles);
+	void processDownloadTexturesPopup(const std::vector<std::string>& missingTextureFiles);
 
 
 	bool AddedMapSccuessfully = false;
@@ -251,11 +290,11 @@ public:
 
 
 	void renderMaps(Gamepad controller);
-	void renderMaps_DisplayMode_0(Map map);
-	void renderMaps_DisplayMode_1(Map map, float buttonWidth);
+	void renderMaps_DisplayMode_0(Map& map, int mapIndex, float childWidth);
+	void renderMaps_DisplayMode_1(Map& map, float buttonWidth, int mapIndex);
 
-	void RLMAPS_RenderAResult(int i, ImDrawList* drawList, static char mapspath[200]);
-	void RLMAPS_renderSearchWorkshopResults(static char mapspath[200]);
+	void RLMAPS_RenderAResult(int i, ImDrawList* drawList, char mapspath[200]);
+	void RLMAPS_renderSearchWorkshopResults(char mapspath[200]);
 	
 
 	ImVec2 CalcRealTextSize(const char* text, float fontSize);

@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "WorkshopMapLoader.h"
 #include "IMGUI/imgui_internal.h"
+#include <cmath>
+#include <chrono>
 
 namespace fs = std::filesystem;
 
@@ -21,14 +23,9 @@ float windowSizeYBefore = ImGui::GetWindowSize().y;
 
 void Pluginx64::Render()
 {
-	HANDLE clip; //ClipBoard to copy and paste
-	if (OpenClipboard(NULL))
-	{
-		clip = GetClipboardData(CF_TEXT);
-		CloseClipboard();
-	}
-
-
+	const auto windowRenderStart = std::chrono::steady_clock::now();
+	static auto nextWindowRenderLog = windowRenderStart;
+	const bool logWindowRender = windowRenderStart >= nextWindowRenderLog;
 
 	ImGui::SetNextWindowSizeConstraints(ImVec2(1326.f, 690.f), ImVec2(1920.f, 1080.f));
 
@@ -40,58 +37,62 @@ void Pluginx64::Render()
 	}
 
 	Gamepad controller1 = Gamepad(1);
-
-	controller1.Update();
-	if (controller1.Connected())
+	double controllerBlockMs = 0.0;
 	{
-		float stickX = controller1.LeftStick_X();
-		float stickY = controller1.LeftStick_Y();
-
-		POINT point;
-		GetCursorPos(&point);
-
-		static bool L1WasPressed = false;
-		static bool BWasPressed = false;
-
-		if (controller1.checkButtonPress(XINPUT_GAMEPAD_LEFT_SHOULDER) && !L1WasPressed) {
-			cvarManager->log("Button L1 is pressed");
-			mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0); //Left click down
-			L1WasPressed = true;
-		}
-		else if (!controller1.checkButtonPress(XINPUT_GAMEPAD_LEFT_SHOULDER) && L1WasPressed)
+		const auto controllerBlockStart = std::chrono::steady_clock::now();
+		controller1.Update();
+		if (controller1.Connected())
 		{
-			mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0); //Left click realease
+			float stickX = controller1.LeftStick_X();
+			float stickY = controller1.LeftStick_Y();
 
-			cvarManager->log("Button L1 is realeased");
-			L1WasPressed = false;
+			POINT point;
+			GetCursorPos(&point);
+
+			static bool L1WasPressed = false;
+			static bool BWasPressed = false;
+
+			if (controller1.checkButtonPress(XINPUT_GAMEPAD_LEFT_SHOULDER) && !L1WasPressed) {
+				cvarManager->log("Button L1 is pressed");
+				mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0); //Left click down
+				L1WasPressed = true;
+			}
+			else if (!controller1.checkButtonPress(XINPUT_GAMEPAD_LEFT_SHOULDER) && L1WasPressed)
+			{
+				mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0); //Left click realease
+
+				cvarManager->log("Button L1 is realeased");
+				L1WasPressed = false;
+			}
+
+
+			if (controller1.checkButtonPress(XINPUT_GAMEPAD_B) && !BWasPressed) {
+				cvarManager->log("Button B is pressed");
+				BWasPressed = true;
+			}
+			else if (!controller1.checkButtonPress(XINPUT_GAMEPAD_B) && BWasPressed)
+			{
+				isWindowOpen_ = false;
+				cvarManager->log("Button B is realeased");
+				BWasPressed = false;
+			}
+
+
+			if (!controller1.LStick_InDeadzone())
+			{
+				int pixelsX = 0;
+				int pixelsY = 0;
+
+				pixelsX = stickX * ControllerSensitivity;
+				pixelsY = stickY * ControllerSensitivity;
+
+				//cvarManager->log("pixelX : " + std::to_string(pixelsX));
+				//cvarManager->log("pixelY : " + std::to_string(pixelsY));
+
+				SetCursorPos(point.x + pixelsX, point.y - pixelsY);
+			}
 		}
-
-
-		if (controller1.checkButtonPress(XINPUT_GAMEPAD_B) && !BWasPressed) {
-			cvarManager->log("Button B is pressed");
-			BWasPressed = true;
-		}
-		else if (!controller1.checkButtonPress(XINPUT_GAMEPAD_B) && BWasPressed)
-		{
-			isWindowOpen_ = false;
-			cvarManager->log("Button B is realeased");
-			BWasPressed = false;
-		}
-
-
-		if (!controller1.LStick_InDeadzone())
-		{
-			int pixelsX = 0;
-			int pixelsY = 0;
-
-			pixelsX = stickX * ControllerSensitivity;
-			pixelsY = stickY * ControllerSensitivity;
-
-			//cvarManager->log("pixelX : " + std::to_string(pixelsX));
-			//cvarManager->log("pixelY : " + std::to_string(pixelsY));
-
-			SetCursorPos(point.x + pixelsX, point.y - pixelsY);
-		}
+		controllerBlockMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - controllerBlockStart).count();
 	}
 	
 
@@ -121,202 +122,9 @@ void Pluginx64::Render()
 	}
 
 
-	if (!FR)
-	{
-		//Menubar
-		SettingsText = "Settings";
-		MultiplayerText = "Multiplayer";
-		LastUpdateText = "Last Update";
-		JoinCWGText = "Join Community Workshop Games discord server :";
-		OpenCPCCText = "Open CookedPCConsole Directory";
-		NoMapsCanBeJoinText = "No maps can be joined";
-		MapsJoinableText = "Maps joinable";
-		DlTexturesText = "Download Textures";
-		LanguageText = "Language";
-		ExtractMethodText = "Extract Method";
-		WarningText = "Warning :";
-
-		//Controller settings
-		ControllerText = "Controller";
-		UseControllerText = "Use Controller";
-		ControllsText = "Controlls";
-		ScrollSensitivityText = "Scroll Sensitivity";
-		SensitivityText = "Sensitivity";
-		ControllsLitText[0] = "Left Thumb + Right Thumb : open/close the menu";
-		ControllsLitText[1] = "DPAD arrows : navigate through the maps";
-		ControllsLitText[2] = "Left joystick : move the cursor";
-		ControllsLitText[3] = "Right joystick : scroll";
-		ControllsLitText[4] = "LB/L1 : click";
-		ControllsLitText[5] = "B/O : close the menu";
-
-		//1st Tab
-		Tab1MapLoaderText = "Map Loader";
-		Label1Text = "Put the path of the maps folder :";
-		SelectMapsFolderText = "Select maps folder";
-		RefreshMapsButtonText = "Refresh Maps";
-		SavePathText = "Save Path";
-		MapsPerLineText = "Maps Per Line :";
-		//context menu strip
-		OpenMapDirText = "Open map directory";
-		DeleteMapText = "Delete map";
-
-		//LauchMode Popup
-		CancelText = "Cancel";
-
-		//Add Map
-		AddMapText = "Add Map";
-		NameText = "Name :";
-		AuthorText = "Author :";
-		MapFilePathText = "Map File Path :";
-		ImagePathText = "Image Path :";
-		SelectFileText = "Select File";
-		FieldEmptyText = "A field is empty !";
-		ConfirmLabelText = "Do you really want to add this map ?";
-		MapAddedSuccessfullyText = "Map added successfully !";
-
-		//2nd Tab
-		DownloadButtonText = "Download";
-		Label3Text = "Search A Workshop :";
-		SearchButtonText = "Search";
-		SearchingText = "Searching...";
-		WorkshopsFoundText = "Workshops Found :";
-		BrowseMapsText = "Browse Maps";
-		Tab3SearchWorkshopText = "Search Workshop (rocketleaguemaps.us)";
-
-
-		//Search Result
-		ResultByText = "By ";
-		ResultSizeText = "Size : ";
-		DownloadMapButtonText = "Download Map";
-
-		//Warnings
-		DirNotExistText = "This directory is not valid !";
-		DownloadFailedText = "Download Failed !" + DownloadFailedErrorText;
-		WantToDawnloadText = "Do you really want to download?\nYou'll not be able to cancel if you start it.";
-		YESButtonText = "YES";
-		NOButtonText = "NO";
-		IsDownloadDingWarningText = "A download is already running !\nYou cannot download 2 workshops at the same time.";
-		PathSavedText = "Path saved successfully !";
-
-		//ExtractMapFiles
-		EMFMessageText1 = "The map isn't extracted from ";
-		EMFMessageText2 = "\nChoose an extract method (you need to click on refresh maps after extracting) :";
-		EMFStillDoesntWorkText = "Still not working";
-		//ExtractManually
-		EMLabelText = "If both of the extract methods didn't work, you need to extract the files manually of ";
-
-		//Download Texutures
-		DLTLabel1Text = "It seems like the workshop textures aren't installed in " + RLCookedPCConsole_Path.string();
-		DLTLabel2Text = "You can still play without the workshop textures but some maps will have some white/weird textures.";
-		DLTMissingFilesText = "Missing Files";
-		DLTTexturesInstalledText = "Workshop textures installed !";
-		CloseText = "Close";
-		DontAskText = "Don't ask me again";
-
-		//File Explorer
-		NewFolderText = "New Folder";
-		ConfirmText = "Confirm";
-		SelectText = "Select";
-	}
-	else
-	{
-		//Menubar
-		SettingsText = "Parametres";
-		MultiplayerText = "Multijoueur";
-		LastUpdateText = "Derniere Maj";
-		JoinCWGText = "Rejoins le serveur discord Community Workshop Games :";
-		OpenCPCCText = "Ouvrir le dossier CookedPCConsole";
-		NoMapsCanBeJoinText = "Aucune map ne peut etre rejoint";
-		MapsJoinableText = "Maps rejoignables";
-		DlTexturesText = "Telecharger les textures";
-		LanguageText = "Langue";
-		ExtractMethodText = "Methode d'extraction";
-		WarningText = "Attention :";
-
-		//Controller settings
-		ControllerText = "Manette";
-		UseControllerText = "Activer La Manette";
-		ControllsText = "Commandes";
-		ScrollSensitivityText = "Sensibilite du defilement";
-		SensitivityText = "Sensibilite";
-		ControllsLitText[0] = "Pouce Gauche + Pouce Droit : ouvrir/fermer le menu";
-		ControllsLitText[1] = "Fleches : naviguer dans les maps";
-		ControllsLitText[2] = "Joystick Gauche : bouger la souris";
-		ControllsLitText[3] = "Joystick Droit : faire defiler";
-		ControllsLitText[4] = "LB/L1 : cliquer";
-		ControllsLitText[5] = "B/O : fermer le menu";
-
-		//1st Tab
-		Tab1MapLoaderText = "Charger Map";
-		Label1Text = "Mets le chemin du dossier des maps :";
-		SelectMapsFolderText = "Choisir Dossier Des Maps";
-		RefreshMapsButtonText = "Rafraichir Les Maps";
-		SavePathText = "Sauvegarder Le Chemin";
-		MapsPerLineText = "Maps Par Ligne :";
-
-		//context menu strip
-		OpenMapDirText = "Ouvrir le dossier de la map";
-		DeleteMapText = "Supprimer la map";
-
-		//LauchMode Popup
-		CancelText = "Annuler";
-
-		//Add Map
-		AddMapText = "Ajouter Map";
-		NameText = "Nom :";
-		AuthorText = "Auteur :";
-		MapFilePathText = "Fichier De La Map :";
-		ImagePathText = "Image :";
-		SelectFileText = "Parcourir";
-		FieldEmptyText = "Un champ est vide !";
-		ConfirmLabelText = "Veux-tu vraiment ajouter cette map ?";
-		MapAddedSuccessfullyText = "Map ajoute avec succes !";
-
-		//2nd Tab
-		DownloadButtonText = "Telecharger";
-		Label3Text = "Rechercher Un Workshop :";
-		SearchButtonText = "Rechercher";
-		SearchingText = "Recherche en cours...";
-		WorkshopsFoundText = "Workshops Trouves :";
-		BrowseMapsText = "Parcourir Les Maps";
-		Tab3SearchWorkshopText = "Rechercher Workshop (rocketleaguemaps.us)";
-
-		//Search Result
-		ResultByText = "Par ";
-		ResultSizeText = "Taille : ";
-		DownloadMapButtonText = "Telecharger La Map";
-
-		//Warnings
-		DirNotExistText = "Ce chemin n'est pas valide !";
-		DownloadFailedText = "Le telechargement a echoue !" + DownloadFailedErrorText;
-		WantToDawnloadText = "Veux-tu vraiment telecharger?\nTu ne pourras plus l'annuler si tu le commence.";
-		YESButtonText = "OUI";
-		NOButtonText = "NON";
-		IsDownloadDingWarningText = "Un telechargement est deja en cours !\nTu ne peux pas telecharger 2 workshops en meme temps.";
-		PathSavedText = "Le chemin a ete sauvegarde !";
-
-
-		//ExtractMapFiles
-		EMFMessageText1 = "La map n'est pas extrait de ";
-		EMFMessageText2 = "\nChoisis une methode d'extraction (rafraichis les maps apres l'extraction) :";
-		EMFStillDoesntWorkText = "Ne fonctionne pas";
-		//ExtractManually
-		EMLabelText = "Si les deux methodes d'extraction n'ont pas fonctionne, tu dois extraire les fichiers manuellement de ";
-
-
-		//Download Texutures
-		DLTLabel1Text = "Les textures des workshops ne semblent pas etre installees dans " + RLCookedPCConsole_Path.string();
-		DLTLabel2Text = "Tu peux toujours jouer sans mais des maps auront des textures blanches/bizarres.";
-		DLTMissingFilesText = "Fichiers Manquants";
-		DLTTexturesInstalledText = "Textures des workshops installees!";
-		CloseText = "Fermer";
-		DontAskText = "Ne plus me demander";
-
-		//File Explorer
-		NewFolderText = "Nouv. Dossier";
-		ConfirmText = "Confirmer";
-		SelectText = "Selectionner";
-	}
+	double localizationBlockMs = lastRenderLocalizationMs;
+	lastRenderLocalizationMs = 0.0;
+	const auto missingTexturesFiles = GetMissingTexturesSnapshot();
 
 
 	if (!HasSeeNewUpdateAlert)
@@ -333,8 +141,10 @@ void Pluginx64::Render()
 	renderInfoPopup("Add Map Successfull", MapAddedSuccessfullyText.c_str()); //"Map added successfully !"
 
 
+	double menuBarMs = 0.0;
 	if (ImGui::BeginMenuBar())
 	{
+		const auto menuBarStart = std::chrono::steady_clock::now();
 		if (ImGui::BeginMenu(SettingsText.c_str())) //"Settings"
 		{
 			if (ImGui::BeginMenu(ExtractMethodText.c_str()))
@@ -378,14 +188,22 @@ void Pluginx64::Render()
 			{
 				if (ImGui::Selectable("French"))
 				{
-					FR = true;
-					SaveInCFG();
+					if (!FR)
+					{
+						FR = true;
+						ApplyLocalization(FR);
+						SaveInCFG();
+					}
 				}
 
 				if (ImGui::Selectable("English"))
 				{
-					FR = false;
-					SaveInCFG();
+					if (FR)
+					{
+						FR = false;
+						ApplyLocalization(FR);
+						SaveInCFG();
+					}
 				}
 				ImGui::EndMenu();
 			}
@@ -443,7 +261,7 @@ void Pluginx64::Render()
 				std::wstring w_modsDir = s2ws(RLCookedPCConsole_Path.string());
 				LPCWSTR L_modsDir = w_modsDir.c_str();
 
-				ShellExecute(NULL, L"open", L_modsDir, NULL, NULL, SW_SHOWDEFAULT);
+				ShellExecuteW(NULL, L"open", L_modsDir, NULL, NULL, SW_SHOWDEFAULT);
 			}
 
 			ImGui::Separator();
@@ -453,13 +271,6 @@ void Pluginx64::Render()
 
 			ImGui::EndMenu();
 		}
-
-		if (DownloadTexturesBool) //I know this is not good but It works, so I don't care
-		{
-			ImGui::OpenPopup("DownloadTextures");
-		}
-		renderDownloadTexturesPopup(CheckExist_TexturesFiles());
-
 
 		if (ImGui::Selectable(LastUpdateText.c_str(), false, 0, ImGui::CalcTextSize(LastUpdateText.c_str())))
 		{
@@ -486,13 +297,19 @@ void Pluginx64::Render()
 			ImGui::EndMenu();
 		}
 		ImGui::EndMenuBar();
+		menuBarMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - menuBarStart).count();
 	}
 
+	double mapTabMs = 0.0;
+	double searchTabMs = 0.0;
+	double tabBarMs = 0.0;
 
 	if (ImGui::BeginTabBar("TabBar"))
 	{
+		const auto tabBarStart = std::chrono::steady_clock::now();
 		if (ImGui::BeginTabItem(Tab1MapLoaderText.c_str())) // "Map Loader"
 		{
+			const auto mapTabStart = std::chrono::steady_clock::now();
 			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 5.f);
 
 			CenterNexIMGUItItem(ImGui::CalcTextSize(Label1Text.c_str()).x);
@@ -501,8 +318,10 @@ void Pluginx64::Render()
 			CenterNexIMGUItItem(628.f);
 			ImGui::SetNextItemWidth(628.f);
 			ImGui::InputText("##workshopurl123", MapsFolderPathBuf, IM_ARRAYSIZE(MapsFolderPathBuf));
+			const fs::path mapsFolderPathBuffered = fs::path(MapsFolderPathBuf);
+			const bool mapsFolderExists = Directory_Or_File_Exists(mapsFolderPathBuffered);
 			ImGui::SameLine();
-			if (!Directory_Or_File_Exists(fs::path(MapsFolderPathBuf)))
+			if (!mapsFolderExists)
 			{
 				ImGui::TextColored(ImVec4(255, 0, 0, 1), DirNotExistText.c_str());
 			}
@@ -543,11 +362,9 @@ void Pluginx64::Render()
 
 			ImGui::SameLine();
 
-			std::vector<std::string> missingTexturesFiles = CheckExist_TexturesFiles();
-
 			if (ImGui::Button(RefreshMapsButtonText.c_str(), ImVec2(151.f, 32.f))) // "Refresh Maps"
 			{
-				if (!Directory_Or_File_Exists(fs::path(MapsFolderPathBuf)))
+				if (!mapsFolderExists)
 				{
 					ImGui::OpenPopup("Exists?");
 				}
@@ -556,13 +373,11 @@ void Pluginx64::Render()
 					RefreshMapsFunct(MapsFolderPathBuf);
 					if (missingTexturesFiles.size() > 0 && dontAsk == 0)
 					{
-						ImGui::OpenPopup("DownloadTextures");
+						DownloadTexturesBool = true;
 					}
 				}
 			}
 			renderInfoPopup("Exists?", DirNotExistText.c_str());
-
-			renderDownloadTexturesPopup(missingTexturesFiles);
 
 			ImGui::SameLine();
 
@@ -643,11 +458,13 @@ void Pluginx64::Render()
 			renderMaps(controller1);
 
 			ImGui::EndTabItem();
+			mapTabMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - mapTabStart).count();
 		}
 
 
 		if (ImGui::BeginTabItem(Tab3SearchWorkshopText.c_str()))
 		{
+			const auto searchTabStart = std::chrono::steady_clock::now();
 			static char keyWord[200] = "";
 			ImGui::BeginGroup();
 			{
@@ -779,11 +596,45 @@ void Pluginx64::Render()
 				ImGui::EndChild();
 			}
 			ImGui::EndTabItem();
+			searchTabMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - searchTabStart).count();
 		}
 		ImGui::EndTabBar();
+		tabBarMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tabBarStart).count();
 	}
 
+	processDownloadTexturesPopup(missingTexturesFiles);
+
 	ImGui::End();
+
+	const auto windowRenderEnd = std::chrono::steady_clock::now();
+	const double windowRenderMs = std::chrono::duration<double, std::milli>(windowRenderEnd - windowRenderStart).count();
+	lastRenderControllerMs = controllerBlockMs;
+	lastRenderMenuBarMs = menuBarMs;
+	lastRenderTabBarMs = tabBarMs;
+	lastRenderMapTabMs = mapTabMs;
+	lastRenderSearchTabMs = searchTabMs;
+	if (logWindowRender)
+	{
+		std::string msg = "[WML] Render window summary open=" + std::string(isWindowOpen_ ? "true" : "false")
+			+ " totalMs=" + std::to_string(windowRenderMs)
+			+ " mapsMs=" + std::to_string(lastRenderMapsDurationMs)
+			+ " missingMs=" + std::to_string(lastRenderMapsMissingMs)
+			+ " playableMs=" + std::to_string(lastRenderMapsPlayableMs)
+			+ " controllerMs=" + std::to_string(lastRenderMapsControllerMs)
+			+ " missingCount=" + std::to_string(lastRenderMapsMissingCount)
+			+ " playableCount=" + std::to_string(lastRenderMapsPlayableCount)
+			+ " quickSearch=" + std::string(lastRenderMapsQuickSearch ? "true" : "false")
+			+ " controllerBlockMs=" + std::to_string(controllerBlockMs)
+			+ " localizationMs=" + std::to_string(localizationBlockMs)
+			+ " menuBarMs=" + std::to_string(menuBarMs)
+			+ " tabBarMs=" + std::to_string(tabBarMs)
+			+ " mapTabMs=" + std::to_string(mapTabMs)
+			+ " searchTabMs=" + std::to_string(searchTabMs)
+			+ " announcementTabMs=" + std::to_string(lastRenderAnnouncementTabMs)
+			+ " changelogTabMs=" + std::to_string(lastRenderChangelogTabMs);
+		cvarManager->log(msg);
+		nextWindowRenderLog = windowRenderStart + std::chrono::milliseconds(2000);
+	}
 
 	if (!isWindowOpen_)
 	{
@@ -795,236 +646,284 @@ void Pluginx64::Render()
 
 void Pluginx64::renderMaps(Gamepad controller)
 {
-	mapButtonList.clear();
+	const auto frameStart = std::chrono::steady_clock::now();
+	const std::vector<Map*>& NoUpk_MapList = GetMapsNeedingExtraction();
+	const std::vector<Map*>& Good_MapList = GetPlayableMaps();
 
-	std::vector<Map> NoUpk_MapList;
-	std::vector<Map> Good_MapList;
+	const std::string quickSearchQuery = std::string(QuickSearch_KeyWordBuf);
+	if (quickSearchQuery != QuickSearch_LastQuery)
+	{
+		UpdateQuickSearchResults(quickSearchQuery);
+	}
+	const bool usingQuickSearch = !quickSearchQuery.empty();
+	const std::vector<Map*>& ActiveMapList = usingQuickSearch ? QuickSearch_Results : Good_MapList;
 
-	int ID = 0;
+	const int missingCount = static_cast<int>(NoUpk_MapList.size());
+	const int playableCount = static_cast<int>(ActiveMapList.size());
+	const int totalEntries = missingCount + playableCount;
 
-	/*
-	ImGui::Text("window width : %f", ImGui::GetWindowWidth());
-	ImGui::Separator();
+	mapButtonList.resize(totalEntries);
+	if (mapButtonGeometryFrame.size() < static_cast<size_t>(totalEntries))
+	{
+		mapButtonGeometryFrame.resize(totalEntries, 0);
+	}
+	const uint32_t currentButtonFrame = ++mapButtonFrameMarker;
 
-	ImGui::SliderInt("width", &widthTest, -100, 1920);
-	ImGui::SliderInt("height", &heightTest, -100, 500);
-	ImGui::SliderFloat("fontsize", &fontSizeTest, 0.f, 1.f);
-	*/
-	
-	MapButtonChild_TopPos = ImGui::GetCursorScreenPos();
+	if (selectedButton >= totalEntries)
+	{
+		selectedButton = totalEntries == 0 ? 0 : totalEntries - 1;
+	}
+	static auto nextLogTime = std::chrono::steady_clock::now();
+	const bool shouldLogFrame = std::chrono::steady_clock::now() >= nextLogTime;
+
+	double missingRenderMs = 0.0;
+	double playableRenderMs = 0.0;
+	double controllerRenderMs = 0.0;
+
 	if (ImGui::BeginChild("#MapsLauncherButtons"))
 	{
-		float windowWidth = ImGui::GetContentRegionAvailWidth();
-		float buttonWidth = (windowWidth - ((nbTilesPerLine - 1) * 8)) / nbTilesPerLine;
-		int nbTilesOnTheCurrentLine = 0;
-
-		for (auto map : MapList)
+		auto missingRenderStart = std::chrono::steady_clock::now();
+		MapButtonChild_TopPos = ImGui::GetCursorScreenPos();
+		const ImGuiStyle& style = ImGui::GetStyle();
+		const float windowWidth = ImGui::GetWindowWidth();
+		const float spacingX = style.ItemSpacing.x;
+		const float spacingY = style.ItemSpacing.y;
+		const float listItemHeight = 120.f;
+		float computedButtonWidth = windowWidth;
+		if (nbTilesPerLine > 0)
 		{
-			if (map.UpkFile == "NoUpkFound" && map.ZipFile != "EmptyFolder" && map.ZipFile != "NoZipFound")
-			{
-				NoUpk_MapList.push_back(map);
-			}
-
-			if (map.UpkFile != "NoUpkFound" && map.UpkFile != "EmptyFolder")
-			{
-				Good_MapList.push_back(map);
-			}
+			computedButtonWidth = (windowWidth - ((nbTilesPerLine - 1) * spacingX)) / nbTilesPerLine;
+		}
+		if (computedButtonWidth < 0.f)
+		{
+			computedButtonWidth = 0.f;
 		}
 
-		for (auto curMap : NoUpk_MapList)
+		missingRenderStart = std::chrono::steady_clock::now();
+		const ImVec2 missingOrigin = ImGui::GetCursorPos();
+		if (missingCount > 0)
 		{
-			ImGui::PushID(ID); //needed to make the button work
-			ImGui::BeginGroup();
+			ImGuiListClipper missingClipper;
+			missingClipper.Begin(missingCount, listItemHeight + spacingY);
+			while (missingClipper.Step())
 			{
-				ImDrawList* draw_list = ImGui::GetWindowDrawList();
-				ImFont* fontA = ImGui::GetDefaultFont();
-
-
-				if (ImGui::Button("##map", ImVec2(ImGui::GetWindowWidth(), 120)))
+				for (int missingIndex = missingClipper.DisplayStart; missingIndex < missingClipper.DisplayEnd; ++missingIndex)
 				{
-					ImGui::OpenPopup("ExtractMapFiles");
-				}
-				renderExtractMapFilesPopup(curMap);
-
-				mapButtonPos buttonMap;
-				buttonMap.rectMin = ImGui::GetItemRectMin();
-				//cvarManager->log("rectmin : " + std::to_string(buttonMap.rectMin.y));
-				buttonMap.rectMax = ImGui::GetItemRectMax();
-				//cvarManager->log("rectmax : " + std::to_string(buttonMap.rectMax.y));
-				buttonMap.cursorPos = ImVec2(((buttonMap.rectMax.x - buttonMap.rectMin.x) / 2) + buttonMap.rectMin.x, ((buttonMap.rectMax.y - buttonMap.rectMin.y) / 2) + buttonMap.rectMin.y);
-
-				if (buttonMap.cursorPos.y < ImGui::GetWindowDrawList()->GetClipRectMax().y && buttonMap.cursorPos.y > MapButtonChild_TopPos.y)
-				{
-					//cvarManager->log(map.mapName + " : visible");
-					buttonMap.isDisplayed = true;
-				}
-				else
-				{
-					//cvarManager->log(map.mapName + " : non visible");
-					buttonMap.isDisplayed = false;
-				}
-
-
-				mapButtonList.push_back(buttonMap);
-
-				ImVec2 ButtonRectMin = ImGui::GetItemRectMin();
-				ImVec2 ButtonRectMax = ImGui::GetItemRectMax();
-				ImVec2 ImageMin = ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 5.f);
-				ImVec2 ImageMax = ImVec2(ImageMin.x + 190.f, ButtonRectMax.y - 5.f);
-
-
-				draw_list->AddRect(ImageMin, ImageMax, ImColor(255, 255, 255, 255), 0, 15, 2.0F);
-				if (curMap.isPreviewImageLoaded == true)
-				{
-					try
+					auto* curMap = NoUpk_MapList[missingIndex];
+					ImGui::SetCursorPos(ImVec2(missingOrigin.x, missingOrigin.y + missingIndex * (listItemHeight + spacingY)));
+					ImGui::PushID(missingIndex);
+					ImGui::BeginGroup();
 					{
-						if (curMap.PreviewImage != nullptr)
+						ImDrawList* draw_list = ImGui::GetWindowDrawList();
+						ImFont* fontA = ImGui::GetDefaultFont();
+
+						if (ImGui::Button("##map", ImVec2(ImGui::GetWindowWidth(), listItemHeight)))
 						{
-							if (curMap.PreviewImage->GetImGuiTex())
+							ImGui::OpenPopup("ExtractMapFiles");
+						}
+						renderExtractMapFilesPopup(*curMap);
+
+						mapButtonPos buttonMap;
+						buttonMap.rectMin = ImGui::GetItemRectMin();
+						buttonMap.rectMax = ImGui::GetItemRectMax();
+						buttonMap.cursorPos = ImVec2(((buttonMap.rectMax.x - buttonMap.rectMin.x) / 2) + buttonMap.rectMin.x, ((buttonMap.rectMax.y - buttonMap.rectMin.y) / 2) + buttonMap.rectMin.y);
+						buttonMap.isDisplayed = ImGui::IsItemVisible();
+						mapButtonList[missingIndex] = buttonMap;
+						mapButtonGeometryFrame[missingIndex] = currentButtonFrame;
+
+						if (buttonMap.isDisplayed)
+						{
+							ImVec2 ButtonRectMin = buttonMap.rectMin;
+							ImVec2 ButtonRectMax = buttonMap.rectMax;
+							ImVec2 ImageMin = ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 5.f);
+							ImVec2 ImageMax = ImVec2(ImageMin.x + 190.f, ButtonRectMax.y - 5.f);
+
+							draw_list->AddRect(ImageMin, ImageMax, ImColor(255, 255, 255, 255), 0, 15, 2.0F);
+							if (curMap->isPreviewImageLoaded == true)
 							{
-								draw_list->AddImage(curMap.PreviewImage->GetImGuiTex(), ImageMin, ImageMax); //Map image preview
+								try
+								{
+									if (curMap->PreviewImage != nullptr && curMap->PreviewImage->GetImGuiTex())
+									{
+										draw_list->AddImage(curMap->PreviewImage->GetImGuiTex(), ImageMin, ImageMax);
+									}
+								}
+								catch (const std::exception& ex)
+								{
+									cvarManager->log(ex.what());
+								}
 							}
+
+							std::string mapName = curMap->JsonFile == "NoInfos"
+								? replace(curMap->Folder.filename().string(), *"_", *" ")
+								: curMap->mapName;
+
+							draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 2.f), ImColor(255, 255, 255, 255),
+								mapName.c_str());
+
+							draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 40.f), ImColor(255, 0, 0, 255),
+								"This map wont work because the map isn't extracted, click to fix.");
 						}
 					}
-					catch (const std::exception& ex)
+					ImGui::EndGroup();
+
+					if (ImGui::BeginPopupContextItem("Map context menu"))
 					{
-						cvarManager->log(ex.what());
-					}
-				}
+						if (ImGui::Selectable(OpenMapDirText.c_str()))
+						{
+							std::wstring w_CurrentMapsDir = s2ws(curMap->Folder.string());
+							LPCWSTR L_CurrentMapsDir = w_CurrentMapsDir.c_str();
+							ShellExecuteW(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT);
+						}
 
-				std::string mapName;
-				if (curMap.JsonFile == "NoInfos")
-				{
-					mapName = replace(curMap.Folder.filename().string(), *"_", *" ");
-				}
-				else
-				{
-					mapName = curMap.mapName;
-				}
-
-
-				draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 2.f), ImColor(255, 255, 255, 255),
-					mapName.c_str());
-
-				draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 40.f), ImColor(255, 0, 0, 255),
-					"This map wont work because the map isn't extracted, click to fix.");
-
-				ImGui::EndGroup();
-
-				if (ImGui::BeginPopupContextItem("Map context menu"))
-				{
-					if (ImGui::Selectable(OpenMapDirText.c_str())) // "Open map directory"
-					{
-						std::wstring w_CurrentMapsDir = s2ws(curMap.Folder.string());
-						LPCWSTR L_CurrentMapsDir = w_CurrentMapsDir.c_str();
-
-						ShellExecute(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT);
+						if (ImGui::Selectable(DeleteMapText.c_str()))
+						{
+							fs::remove_all(curMap->Folder);
+							RefreshMapsFunct(MapsFolderPathBuf);
+						}
+						ImGui::EndPopup();
 					}
 
-					if (ImGui::Selectable(DeleteMapText.c_str())) // "Delete Map"
-					{
-						MapList.clear();
-						fs::remove_all(curMap.Folder);
-						RefreshMapsFunct(MapsFolderPathBuf);
-					}
-					ImGui::EndPopup();
+					ImGui::PopID();
 				}
 			}
-			ImGui::PopID();
-			ID++;
-		}
 
-		std::vector<bool> isHoveringMapButtonList;
-
-		if (std::string(QuickSearch_KeyWordBuf) != "") //if there is something to find
-		{
-			Good_MapList = QuickSearch_GetMapList(std::string(QuickSearch_KeyWordBuf));
-			QuickSearch_Searching = true;
+			ImGui::SetCursorPos(ImVec2(missingOrigin.x, missingOrigin.y + missingCount * (listItemHeight + spacingY)));
 		}
-		else
-		{
-			QuickSearch_Searching = false;
-		}
+		missingRenderMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - missingRenderStart).count();
 
-		for (auto curMap : Good_MapList)
+		isHoveringMapButton = false;
+		const auto playableRenderStart = std::chrono::steady_clock::now();
+		const ImVec2 playableOrigin = ImGui::GetCursorPos();
+		if (playableCount > 0)
 		{
-			ImGui::PushID(ID); //needed to make the button work
+			if (MapsDisplayMode == 0)
+			{
+				ImGuiListClipper playableClipper;
+				playableClipper.Begin(playableCount, listItemHeight + spacingY);
+				while (playableClipper.Step())
+				{
+					for (int localIndex = playableClipper.DisplayStart; localIndex < playableClipper.DisplayEnd; ++localIndex)
+					{
+						if (localIndex < 0 || localIndex >= playableCount)
+							continue;
+
+						int globalIndex = missingCount + localIndex;
+						auto* curMap = ActiveMapList[localIndex];
+						ImGui::PushID(globalIndex);
+						ImGui::SetCursorPos(ImVec2(playableOrigin.x, playableOrigin.y + localIndex * (listItemHeight + spacingY)));
+						renderMaps_DisplayMode_0(*curMap, globalIndex, windowWidth);
+						mapButtonGeometryFrame[globalIndex] = currentButtonFrame;
+
+						if (ImGui::IsItemHovered())
+						{
+							isHoveringMapButton = true;
+							selectedButton = globalIndex;
+						}
+
+						ImGui::PopID();
+					}
+				}
+			}
+			else
+			{
+				const int tilesPerLine = nbTilesPerLine > 0 ? nbTilesPerLine : 1;
+				const int rowCount = (playableCount + tilesPerLine - 1) / tilesPerLine;
+				const float tileHeight = computedButtonWidth * 0.75f;
+				ImGuiListClipper rowClipper;
+				rowClipper.Begin(rowCount, tileHeight + spacingY);
+				while (rowClipper.Step())
+				{
+					for (int row = rowClipper.DisplayStart; row < rowClipper.DisplayEnd; ++row)
+					{
+						const float rowY = playableOrigin.y + row * (tileHeight + spacingY);
+						for (int column = 0; column < tilesPerLine; ++column)
+						{
+							const int localIndex = row * tilesPerLine + column;
+							if (localIndex >= playableCount)
+								break;
+
+							int globalIndex = missingCount + localIndex;
+							auto* curMap = ActiveMapList[localIndex];
+							const float columnX = playableOrigin.x + column * (computedButtonWidth + spacingX);
+							ImGui::SetCursorPos(ImVec2(columnX, rowY));
+							ImGui::PushID(globalIndex);
+							renderMaps_DisplayMode_1(*curMap, computedButtonWidth, globalIndex);
+							mapButtonGeometryFrame[globalIndex] = currentButtonFrame;
+
+							if (ImGui::IsItemHovered())
+							{
+								isHoveringMapButton = true;
+								selectedButton = globalIndex;
+							}
+
+							ImGui::PopID();
+						}
+					}
+				}
+
+				ImGui::SetCursorPos(ImVec2(playableOrigin.x, playableOrigin.y + rowCount * (tileHeight + spacingY)));
+			}
 
 			if (MapsDisplayMode == 0)
 			{
-				renderMaps_DisplayMode_0(curMap);
-
-				/*
-				//not working well
-				if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
-				{
-					// Set payload to carry the index of our item (could be anything)
-					ImGui::SetDragDropPayload("DND_DEMO_CELL", &ID, sizeof(int));
-
-					ImGui::EndDragDropSource();
-				}
-
-				if (ImGui::BeginDragDropTarget())
-				{
-					if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_DEMO_CELL"))
-					{
-						IM_ASSERT(payload->DataSize == sizeof(int));
-						int payload_n = *(const int*)payload->Data;
-						
-						//https://stackoverflow.com/questions/45447361/how-to-move-certain-elements-of-stdvector-to-a-new-index-within-the-vector
-						if (payload_n > ID)
-							std::rotate(MapList.rend() - payload_n - 1, MapList.rend() - payload_n, MapList.rend() - ID);
-						else
-							std::rotate(MapList.begin() + payload_n, MapList.begin() + payload_n + 1, MapList.begin() + ID + 1);
-							
-					}
-					ImGui::EndDragDropTarget();
-				}*/
-
-				ImGui::PopID();
-				ID++;
+				ImGui::SetCursorPos(ImVec2(playableOrigin.x, playableOrigin.y + playableCount * (listItemHeight + spacingY)));
 			}
-			else
+		}
+		playableRenderMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - playableRenderStart).count();
+
+		const float scrollY = ImGui::GetScrollY();
+		const float tileHeight = computedButtonWidth * 0.75f;
+		const float missingAdvanceY = listItemHeight + spacingY;
+		const float missingSectionOffset = missingCount * missingAdvanceY;
+		auto ensureButtonGeometry = [&](int globalIndex) -> mapButtonPos
+		{
+			mapButtonPos invalid{};
+			if (globalIndex < 0 || globalIndex >= totalEntries)
 			{
-				renderMaps_DisplayMode_1(curMap, buttonWidth);
-				nbTilesOnTheCurrentLine++;
-				ImGui::PopID();
-				ID++;
-				if (nbTilesOnTheCurrentLine == nbTilesPerLine)
+				return invalid;
+			}
+
+			if (mapButtonGeometryFrame[globalIndex] != currentButtonFrame)
+			{
+				mapButtonPos placeholder{};
+				if (globalIndex >= missingCount)
 				{
-					nbTilesOnTheCurrentLine = 0;
-					ImGui::NewLine();
+					const int localIndex = globalIndex - missingCount;
+					if (MapsDisplayMode == 0)
+					{
+						const float localY = localIndex * missingAdvanceY;
+						placeholder.rectMin = ImVec2(MapButtonChild_TopPos.x, MapButtonChild_TopPos.y + missingSectionOffset + localY - scrollY);
+						placeholder.rectMax = ImVec2(placeholder.rectMin.x + windowWidth, placeholder.rectMin.y + listItemHeight);
+					}
+					else
+					{
+						const int tilesPerLine = nbTilesPerLine > 0 ? nbTilesPerLine : 1;
+						const int column = localIndex % tilesPerLine;
+						const int row = localIndex / tilesPerLine;
+						const float localX = column * (computedButtonWidth + spacingX);
+						const float localY = row * (tileHeight + spacingY);
+						placeholder.rectMin = ImVec2(MapButtonChild_TopPos.x + localX, MapButtonChild_TopPos.y + missingSectionOffset + localY - scrollY);
+						placeholder.rectMax = ImVec2(placeholder.rectMin.x + computedButtonWidth, placeholder.rectMin.y + tileHeight);
+					}
 				}
 				else
 				{
-					ImGui::SameLine();
+					const float localY = globalIndex * missingAdvanceY;
+					placeholder.rectMin = ImVec2(MapButtonChild_TopPos.x, MapButtonChild_TopPos.y + localY - scrollY);
+					placeholder.rectMax = ImVec2(MapButtonChild_TopPos.x + windowWidth, MapButtonChild_TopPos.y + listItemHeight);
 				}
+
+				placeholder.cursorPos = ImVec2((placeholder.rectMin.x + placeholder.rectMax.x) * 0.5f, (placeholder.rectMin.y + placeholder.rectMax.y) * 0.5f);
+				placeholder.isDisplayed = false;
+				mapButtonList[globalIndex] = placeholder;
+				mapButtonGeometryFrame[globalIndex] = currentButtonFrame;
 			}
 
-			if (ImGui::IsItemHovered())
-			{
-				//cvarManager->log(std::to_string(ID));
-				isHoveringMapButtonList.push_back(true);
-				selectedButton = ID - 1;
-			}
-			else
-			{
-				isHoveringMapButtonList.push_back(false);
-			}
-		}
+			return mapButtonList[globalIndex];
+		};
 
-		for (int i = 0; i < isHoveringMapButtonList.size(); i++)
-		{
-			isHoveringMapButton = false;
-
-			if (isHoveringMapButtonList.at(i) == true)
-			{
-				isHoveringMapButton = true;
-				break;
-			}
-		}
-
-
+		const auto controllerRenderStart = std::chrono::steady_clock::now();
 		float rightStickY = controller.RightStick_Y();
 
 		static bool DpadUpWasPressed = false;
@@ -1049,7 +948,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 						if (MapsDisplayMode == 1 && (selectedButton - nbTilesPerLine) >= 0)
 							selectedButton -= nbTilesPerLine;
 					}
-					mapButtonPos buttonMap = mapButtonList.at(selectedButton);
+					mapButtonPos buttonMap = ensureButtonGeometry(selectedButton);
 
 					if (buttonMap.isDisplayed)
 					{
@@ -1092,7 +991,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 							}
 						}
 					}
-					mapButtonPos buttonMap = mapButtonList.at(selectedButton);
+					mapButtonPos buttonMap = ensureButtonGeometry(selectedButton);
 
 					if (buttonMap.isDisplayed)
 					{
@@ -1122,7 +1021,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 						selectedButton -= 1;
 
 
-					mapButtonPos buttonMap = mapButtonList.at(selectedButton);
+					mapButtonPos buttonMap = ensureButtonGeometry(selectedButton);
 
 					if (buttonMap.isDisplayed)
 					{
@@ -1152,7 +1051,7 @@ void Pluginx64::renderMaps(Gamepad controller)
 					if (MapsDisplayMode == 1 && selectedButton < mapButtonList.size() - 1)
 						selectedButton++;
 
-					mapButtonPos buttonMap = mapButtonList.at(selectedButton);
+					mapButtonPos buttonMap = ensureButtonGeometry(selectedButton);
 
 					if (buttonMap.isDisplayed)
 					{
@@ -1175,23 +1074,86 @@ void Pluginx64::renderMaps(Gamepad controller)
 				ImGui::SetScrollY(ImGui::GetScrollY() - (rightStickY * ControllerScrollSensitivity));
 			}
 		}
-
-
+		controllerRenderMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - controllerRenderStart).count();
 	}
 	ImGui::EndChild();
+
+	const auto frameEnd = std::chrono::steady_clock::now();
+	const double frameMs = std::chrono::duration<double, std::milli>(frameEnd - frameStart).count();
+	lastRenderMapsDurationMs = frameMs;
+	lastRenderMapsMissingMs = missingRenderMs;
+	lastRenderMapsPlayableMs = playableRenderMs;
+	lastRenderMapsControllerMs = controllerRenderMs;
+	lastRenderMapsMissingCount = missingCount;
+	lastRenderMapsPlayableCount = playableCount;
+	lastRenderMapsQuickSearch = usingQuickSearch;
+	if (shouldLogFrame)
+	{
+		std::string msg = "[WML] renderMaps summary maps=" + std::to_string(MapList.size())
+			+ " missing=" + std::to_string(missingCount)
+			+ " playable=" + std::to_string(playableCount)
+			+ " quickSearch=" + std::string(usingQuickSearch ? "true" : "false")
+			+ " displayMode=" + std::to_string(MapsDisplayMode)
+			+ " tilesPerLine=" + std::to_string(nbTilesPerLine)
+			+ " durationMs=" + std::to_string(frameMs)
+			+ " missingMs=" + std::to_string(missingRenderMs)
+			+ " playableMs=" + std::to_string(playableRenderMs)
+			+ " controllerMs=" + std::to_string(controllerRenderMs);
+		cvarManager->log(msg);
+		nextLogTime = frameEnd + std::chrono::milliseconds(2000);
+	}
 }
 
-void Pluginx64::renderMaps_DisplayMode_0(Map map)
+void Pluginx64::EnsureGridTitleCache(Map& map, float buttonWidth)
+{
+	float usableWidth = buttonWidth * 0.808f;
+	if (usableWidth < 0.f)
+	{
+		usableWidth = 0.f;
+	}
+
+	if (!map.gridDisplayName.empty() && std::fabs(map.gridDisplayWidth - usableWidth) < 0.5f)
+	{
+		return;
+	}
+
+	if (map.displayCacheDirty)
+	{
+		UpdateMapDisplayCache(map);
+	}
+
+	std::string baseName = !map.displayName.empty() ? map.displayName : map.mapName;
+	std::string gridName = baseName;
+
+	if (usableWidth > 0.f && ImGui::CalcTextSize(gridName.c_str()).x > usableWidth)
+	{
+		const float ellipsisWidth = ImGui::CalcTextSize("...").x;
+		float maxTextWidth = usableWidth - ellipsisWidth;
+		if (maxTextWidth < 0.f)
+		{
+			maxTextWidth = 0.f;
+		}
+		gridName = LimitTextSize(gridName, maxTextWidth);
+		gridName.append("...");
+	}
+
+	map.gridDisplayName = std::move(gridName);
+	map.gridDisplayWidth = usableWidth;
+}
+
+void Pluginx64::renderMaps_DisplayMode_0(Map& map, int mapIndex, float childWidth)
 {
 	ImGui::BeginGroup();
 	{
 		ImDrawList* draw_list = ImGui::GetWindowDrawList();
 		ImFont* fontA = ImGui::GetDefaultFont();
 
-		float windowWidth = ImGui::GetContentRegionAvailWidth();
+		if (map.displayCacheDirty)
+		{
+			UpdateMapDisplayCache(map);
+		}
 
-		
-		if (ImGui::Button("##map", ImVec2(ImGui::GetWindowWidth(), 120)))
+		if (ImGui::Button("##map", ImVec2(childWidth, 120)))
 		{
 			gameWrapper->Execute([&, map](GameWrapper* gw)
 				{
@@ -1204,99 +1166,52 @@ void Pluginx64::renderMaps_DisplayMode_0(Map map)
 
 		mapButtonPos buttonMap;
 		buttonMap.rectMin = ImGui::GetItemRectMin();
-		//cvarManager->log("rectmin : " + std::to_string(buttonMap.rectMin.y));
 		buttonMap.rectMax = ImGui::GetItemRectMax();
-		//cvarManager->log("rectmax : " + std::to_string(buttonMap.rectMax.y));
 		buttonMap.cursorPos = ImVec2(((buttonMap.rectMax.x - buttonMap.rectMin.x) / 2) + buttonMap.rectMin.x, ((buttonMap.rectMax.y - buttonMap.rectMin.y) / 2) + buttonMap.rectMin.y);
+		buttonMap.isDisplayed = ImGui::IsItemVisible();
 
-		if (buttonMap.cursorPos.y < ImGui::GetWindowDrawList()->GetClipRectMax().y && buttonMap.cursorPos.y > MapButtonChild_TopPos.y)
+		if (mapIndex >= 0 && mapIndex < static_cast<int>(mapButtonList.size()))
 		{
-			//cvarManager->log(map.mapName + " : visible");
-			buttonMap.isDisplayed = true;
-		}
-		else
-		{
-			//cvarManager->log(map.mapName + " : non visible");
-			buttonMap.isDisplayed = false;
+			mapButtonList[mapIndex] = buttonMap;
 		}
 
-
-		mapButtonList.push_back(buttonMap);
-
-		ImVec2 ButtonRectMin = ImGui::GetItemRectMin();
-		ImVec2 ButtonRectMax = ImGui::GetItemRectMax();
-		ImVec2 ImageMin = ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 5.f);
-		ImVec2 ImageMax = ImVec2(ImageMin.x + 190.f, ButtonRectMax.y - 5.f);
-
-
-
-		draw_list->AddRect(ImageMin, ImageMax, ImColor(255, 255, 255, 255), 0, 15, 2.0F);
-		if (map.isPreviewImageLoaded == true)
+		if (buttonMap.isDisplayed)
 		{
-			try
+			ImVec2 ButtonRectMin = buttonMap.rectMin;
+			ImVec2 ButtonRectMax = buttonMap.rectMax;
+			ImVec2 ImageMin = ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 5.f);
+			ImVec2 ImageMax = ImVec2(ImageMin.x + 190.f, ButtonRectMax.y - 5.f);
+
+			draw_list->AddRect(ImageMin, ImageMax, ImColor(255, 255, 255, 255), 0, 15, 2.0F);
+			if (map.isPreviewImageLoaded == true)
 			{
-				if (map.PreviewImage != nullptr)
+				try
 				{
-					if (map.PreviewImage->GetImGuiTex())
+					if (map.PreviewImage != nullptr && map.PreviewImage->GetImGuiTex())
 					{
 						draw_list->AddImage(map.PreviewImage->GetImGuiTex(), ImageMin, ImageMax); //Map image preview
 					}
 				}
-			}
-			catch (const std::exception& ex)
-			{
-				cvarManager->log(ex.what());
-			}
-		}
-
-		if (map.JsonFile == "NoInfos")
-		{
-			draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 10.f), ImColor(255, 255, 255, 255),
-				replace(map.Folder.filename().string(), *"_", *" ").c_str());
-		}
-		else
-		{
-			
-			std::string GoodDescription = map.mapDescription;
-			if (map.mapDescription.length() > 150)
-			{
-				GoodDescription.insert(145, "\n");
-
-				if (map.mapDescription.length() > 280)
+				catch (const std::exception& ex)
 				{
-					GoodDescription.erase(280);
-					GoodDescription.append("...");
+					cvarManager->log(ex.what());
 				}
 			}
-			
 
-			//responsive description but it takes too much ressources and causes fps issues for not good PC (like my PC xD)
-			/*
-			float descriptionWidth = ((windowWidth - 214) * 0.867f);
-			std::string mapDescription = GetJSONLocalMapInfos(map.JsonFile).at(1);
-			std::vector<std::string> mapDescriptionParts;
-			if (ImGui::CalcTextSize(mapDescription.c_str()).x > descriptionWidth)
+			if (map.JsonFile == "NoInfos")
 			{
-				mapDescriptionParts.push_back(LimitTextSize(mapDescription, descriptionWidth)); //first line of the description
-				mapDescription.erase(mapDescription.find(mapDescriptionParts.at(0)), mapDescriptionParts.at(0).length()); //remove the first line in description
-				mapDescriptionParts.push_back(LimitTextSize(mapDescription, descriptionWidth)); //second line of the description
-
-				if (mapDescription.length() > mapDescriptionParts.at(1).length())
-				{
-					mapDescription = mapDescriptionParts.at(0) + "\n" + mapDescriptionParts.at(1) + "...";
-				}
-				else
-				{
-					mapDescription = mapDescriptionParts.at(0) + "\n" + mapDescriptionParts.at(1);
-				}
+				draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 10.f), ImColor(255, 255, 255, 255),
+					map.displayName.c_str());
 			}
-			*/
-
-			draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 2.f), ImColor(255, 255, 255, 255),
-				map.mapName.c_str()); //Map title
-			draw_list->AddText(fontA, 15.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 40.f), ImColor(200, 200, 200, 255), GoodDescription.c_str()); //Map Description
-			draw_list->AddText(fontA, 15.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 90.f), ImColor(0, 200, 255, 255),
-				std::string(ResultByText.c_str() + map.mapAuthor).c_str()); // "By " Map Author
+			else
+			{
+				const std::string& listTitle = map.displayName.empty() ? map.mapName : map.displayName;
+				draw_list->AddText(fontA, 25.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 2.f), ImColor(255, 255, 255, 255),
+					listTitle.c_str()); //Map title
+				draw_list->AddText(fontA, 15.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 40.f), ImColor(200, 200, 200, 255), map.displayDescription.c_str()); //Map Description
+				draw_list->AddText(fontA, 15.f, ImVec2(ImageMax.x + 4.f, ButtonRectMin.y + 90.f), ImColor(0, 200, 255, 255),
+					std::string(ResultByText.c_str() + map.mapAuthor).c_str()); // "By " Map Author
+			}
 		}
 
 		ImGui::EndGroup();
@@ -1308,7 +1223,7 @@ void Pluginx64::renderMaps_DisplayMode_0(Map map)
 				std::wstring w_CurrentMapsDir = s2ws(map.Folder.string());
 				LPCWSTR L_CurrentMapsDir = w_CurrentMapsDir.c_str();
 
-				ShellExecute(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT);
+					ShellExecuteW(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT);
 			}
 
 			if (ImGui::Selectable(DeleteMapText.c_str())) // "Delete Map"
@@ -1321,11 +1236,15 @@ void Pluginx64::renderMaps_DisplayMode_0(Map map)
 	}
 }
 
-void Pluginx64::renderMaps_DisplayMode_1(Map map, float buttonWidth)
+void Pluginx64::renderMaps_DisplayMode_1(Map& map, float buttonWidth, int mapIndex)
 {
 	ImGui::BeginGroup();
 	{
 		ImDrawList* draw_list = ImGui::GetWindowDrawList();
+		if (map.displayCacheDirty)
+		{
+			UpdateMapDisplayCache(map);
+		}
 
 		if (ImGui::Button("##map", ImVec2(buttonWidth, (buttonWidth * 0.75f))))
 		{
@@ -1339,71 +1258,44 @@ void Pluginx64::renderMaps_DisplayMode_1(Map map, float buttonWidth)
 
 		mapButtonPos buttonMap;
 		buttonMap.rectMin = ImGui::GetItemRectMin();
-		//cvarManager->log("rectmin : " + std::to_string(buttonMap.rectMin.y));
 		buttonMap.rectMax = ImGui::GetItemRectMax();
-		//cvarManager->log("rectmax : " + std::to_string(buttonMap.rectMax.y));
 		buttonMap.cursorPos = ImVec2(((buttonMap.rectMax.x - buttonMap.rectMin.x) / 2) + buttonMap.rectMin.x, ((buttonMap.rectMax.y - buttonMap.rectMin.y) / 2) + buttonMap.rectMin.y);
+		buttonMap.isDisplayed = ImGui::IsItemVisible();
 
-		if (buttonMap.cursorPos.y < ImGui::GetWindowDrawList()->GetClipRectMax().y && buttonMap.cursorPos.y > MapButtonChild_TopPos.y)
+		if (mapIndex >= 0 && mapIndex < static_cast<int>(mapButtonList.size()))
 		{
-			//cvarManager->log(map.mapName + " : visible");
-			buttonMap.isDisplayed = true;
-		}
-		else
-		{
-			//cvarManager->log(map.mapName + " : non visible");
-			buttonMap.isDisplayed = false;
+			mapButtonList[mapIndex] = buttonMap;
 		}
 
-
-		mapButtonList.push_back(buttonMap);
-
-
-		ImVec2 ButtonRectMin = ImGui::GetItemRectMin();
-		ImVec2 ButtonRectMax = ImGui::GetItemRectMax();
-		ImVec2 ImageMin = ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 29.f);
-		ImVec2 ImageMax = ImVec2(ButtonRectMax.x - 5.f, ButtonRectMax.y - 5.f);
-
-
-		draw_list->AddRect(ImageMin, ImageMax, ImColor(255, 255, 255, 255), 0, 15, 2.0F);
-		if (map.isPreviewImageLoaded == true)
+		if (buttonMap.isDisplayed)
 		{
-			try
+			ImVec2 ButtonRectMin = buttonMap.rectMin;
+			ImVec2 ButtonRectMax = buttonMap.rectMax;
+			ImVec2 ImageMin = ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 29.f);
+			ImVec2 ImageMax = ImVec2(ButtonRectMax.x - 5.f, ButtonRectMax.y - 5.f);
+
+			draw_list->AddRect(ImageMin, ImageMax, ImColor(255, 255, 255, 255), 0, 15, 2.0F);
+			if (map.isPreviewImageLoaded == true)
 			{
-				if (map.PreviewImage != nullptr)
+				try
 				{
-					if (map.PreviewImage->GetImGuiTex())
+					if (map.PreviewImage != nullptr && map.PreviewImage->GetImGuiTex())
 					{
 						draw_list->AddImage(map.PreviewImage->GetImGuiTex(), ImageMin, ImageMax); //Map image preview
 					}
 				}
+				catch (const std::exception& ex)
+				{
+					cvarManager->log(ex.what());
+				}
 			}
-			catch (const std::exception& ex)
-			{
-				cvarManager->log(ex.what());
-			}
+
+			ImFont* fontA = ImGui::GetDefaultFont();
+			EnsureGridTitleCache(map, buttonWidth);
+			const std::string& mapTitle = map.gridDisplayName.empty() ? (map.displayName.empty() ? map.mapName : map.displayName) : map.gridDisplayName;
+
+			draw_list->AddText(fontA, 15.5f, ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 6.f), ImColor(255, 255, 255, 255), mapTitle.c_str()); //Map title
 		}
-
-		ImFont* fontA = ImGui::GetDefaultFont();
-
-
-
-		std::string mapTitle;
-		if (map.JsonFile == "NoInfos")
-		{
-			mapTitle = replace(map.Folder.filename().string(), *"_", *" ");
-		}
-		else
-		{
-			mapTitle = map.mapName;
-		}
-
-		if (ImGui::CalcTextSize(mapTitle.c_str()).x > (buttonWidth * 0.808f))
-		{
-			mapTitle = LimitTextSize(mapTitle, (buttonWidth * 0.808f) - ImGui::CalcTextSize("...").x) + "...";
-		}
-
-		draw_list->AddText(fontA, 15.5f, ImVec2(ButtonRectMin.x + 5.f, ButtonRectMin.y + 6.f), ImColor(255, 255, 255, 255), mapTitle.c_str()); //Map title
 
 
 
@@ -1416,7 +1308,7 @@ void Pluginx64::renderMaps_DisplayMode_1(Map map, float buttonWidth)
 				std::wstring w_CurrentMapsDir = s2ws(map.Folder.string());
 				LPCWSTR L_CurrentMapsDir = w_CurrentMapsDir.c_str();
 
-				ShellExecute(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT);
+					ShellExecuteW(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT);
 			}
 
 			if (ImGui::Selectable(DeleteMapText.c_str())) // "Delete Map"
@@ -1467,7 +1359,7 @@ void Pluginx64::renderQuickSearch()
 }
 
 
-void Pluginx64::RLMAPS_renderSearchWorkshopResults(static char mapspath[200])
+void Pluginx64::RLMAPS_renderSearchWorkshopResults(char mapspath[200])
 {
 	int LinesNb = 0;
 	RLMAPS_SearchWorkshopDisplayed = 0;
@@ -1509,11 +1401,11 @@ void Pluginx64::RLMAPS_renderSearchWorkshopResults(static char mapspath[200])
 	
 }
 
-void Pluginx64::RLMAPS_RenderAResult(int i, ImDrawList* drawList, static char mapspath[200])
+void Pluginx64::RLMAPS_RenderAResult(int i, ImDrawList* drawList, char mapspath[200])
 {
 	ImGui::PushID(i);
 
-	RLMAPS_MapResult mapResult = RLMAPS_MapResultList.at(i);
+	const RLMAPS_MapResult& mapResult = RLMAPS_MapResultList.at(i);
 	std::string mapName = mapResult.Name;
 	//std::string mapSize = mapResult.Size;
 	std::string mapDescription = mapResult.Description;
@@ -1532,24 +1424,28 @@ void Pluginx64::RLMAPS_RenderAResult(int i, ImDrawList* drawList, static char ma
 			ImVec2 ImageP_Min = ImVec2(TopCornerLeft.x + 6.f, TopCornerLeft.y + 6.f);
 			ImVec2 ImageP_Max = ImVec2(TopCornerLeft.x + 184.f, TopCornerLeft.y + 179.f);
 
-			drawList->AddRectFilled(TopCornerLeft, RectFilled_p_max, ImColor(44, 75, 113, 255), 5.f, 15); //Blue rectangle
-			drawList->AddRect(ImageP_Min, ImageP_Max, ImColor(255, 255, 255, 255), 0, 15, 2.0F); //Image white outline
-
-			if (mapResult.isImageLoaded == true)
+			const bool isVisible = ImGui::IsRectVisible(TopCornerLeft, RectFilled_p_max);
+			if (isVisible)
 			{
-				try
+				drawList->AddRectFilled(TopCornerLeft, RectFilled_p_max, ImColor(44, 75, 113, 255), 5.f, 15); //Blue rectangle
+				drawList->AddRect(ImageP_Min, ImageP_Max, ImColor(255, 255, 255, 255), 0, 15, 2.0F); //Image white outline
+
+				if (mapResult.isImageLoaded == true)
 				{
-					if (mapResult.Image != nullptr)
+					try
 					{
-						if (mapResult.Image->GetImGuiTex())
+						if (mapResult.Image != nullptr)
 						{
-							drawList->AddImage(mapResult.Image->GetImGuiTex(), ImageP_Min, ImageP_Max); //Map image preview
+							if (mapResult.Image->GetImGuiTex())
+							{
+								drawList->AddImage(mapResult.Image->GetImGuiTex(), ImageP_Min, ImageP_Max); //Map image preview
+							}
 						}
 					}
-				}
-				catch (const std::exception& ex)
-				{
-					//cvarManager->log(ex.what());
+					catch (const std::exception& ex)
+					{
+						//cvarManager->log(ex.what());
+					}
 				}
 			}
 
@@ -1565,10 +1461,12 @@ void Pluginx64::RLMAPS_RenderAResult(int i, ImDrawList* drawList, static char ma
 			{
 				GoodMapName = LimitTextSize(GoodMapName, (186.f * 0.982f) - ImGui::CalcTextSize("...").x) + "...";
 			}
-			drawList->AddText(ImVec2(TopCornerLeft.x + 4.f, TopCornerLeft.y + 185.f), ImColor(255, 255, 255, 255), GoodMapName.c_str()); //Map title
-			//drawList->AddText(ImVec2(TopCornerLeft.x + 4.f, TopCornerLeft.y + 200.f), ImColor(255, 255, 255, 255), SizeConverted.c_str()); //Map size
-			drawList->AddText(ImVec2(TopCornerLeft.x + 4.f, TopCornerLeft.y + 215.f), ImColor(255, 255, 255, 255),
-				std::string(ResultByText.c_str() + mapAuthor).c_str()); // "By : " Map Author
+			if (isVisible)
+			{
+				drawList->AddText(ImVec2(TopCornerLeft.x + 4.f, TopCornerLeft.y + 185.f), ImColor(255, 255, 255, 255), GoodMapName.c_str()); //Map title
+				drawList->AddText(ImVec2(TopCornerLeft.x + 4.f, TopCornerLeft.y + 215.f), ImColor(255, 255, 255, 255),
+					std::string(ResultByText.c_str() + mapAuthor).c_str()); // "By : " Map Author
+			}
 			ImGui::SetCursorScreenPos(ImVec2(TopCornerLeft.x + 4.f, TopCornerLeft.y + 235.f));
 			if (ImGui::Button(DownloadMapButtonText.c_str(), ImVec2(182, 20))) // "Download Map"																								//Map download button
 			{
@@ -1635,11 +1533,36 @@ void Pluginx64::AlignRightNexIMGUItItem(float itemWidth, float borderGap)
 
 std::string Pluginx64::LimitTextSize(std::string str, float maxTextSize)
 {
-	while (ImGui::CalcTextSize(str.c_str()).x > maxTextSize)
+	if (str.empty())
 	{
-		str = str.substr(0, str.size() - 1);
+		return str;
 	}
-	return str;
+
+	if (ImGui::CalcTextSize(str.c_str()).x <= maxTextSize)
+	{
+		return str;
+	}
+
+	int left = 0;
+	int right = static_cast<int>(str.size());
+	int best = 0;
+
+	while (left < right)
+	{
+		int mid = (left + right) / 2;
+		std::string candidate = str.substr(0, mid);
+		if (ImGui::CalcTextSize(candidate.c_str()).x <= maxTextSize)
+		{
+			best = mid;
+			left = mid + 1;
+		}
+		else
+		{
+			right = mid;
+		}
+	}
+
+	return str.substr(0, best);
 }
 
 //https://gist.github.com/dougbinks/ef0962ef6ebe2cadae76c4e9f0586c69
@@ -1663,7 +1586,7 @@ void Pluginx64::renderLink(std::string link)
 		ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 		if (ImGui::IsMouseClicked(0))
 		{
-			ShellExecute(0, 0, L_LINK, 0, 0, SW_SHOW); //open link in web browser
+			ShellExecuteW(0, 0, L_LINK, 0, 0, SW_SHOW); //open link in web browser
 		}
 		renderUnderLine(ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
 	}
@@ -1739,7 +1662,7 @@ void Pluginx64::renderAcceptDownload()
 }
 
 
-void Pluginx64::renderExtractMapFilesPopup(Map curMap)
+void Pluginx64::renderExtractMapFilesPopup(const Map& curMap)
 {
 	if (ImGui::BeginPopupModal("ExtractMapFiles", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
@@ -1747,19 +1670,20 @@ void Pluginx64::renderExtractMapFilesPopup(Map curMap)
 		ImGui::Text(message.c_str());
 		ImGui::NewLine();
 
-
+		const std::string extractionLabel = "Extracting " + curMap.ZipFile.filename().string();
 		CenterNexIMGUItItem(326.f);
 		if (ImGui::Button("Powershell", ImVec2(100.f, 25.f)))
 		{
 			ImGui::CloseCurrentPopup();
 			std::string extractCommand = "powershell.exe Expand-Archive -LiteralPath '" + curMap.ZipFile.string() + "' -DestinationPath '" + curMap.Folder.string() + "/'";
-			system(extractCommand.c_str());
+			RunExternalCommandAsync(extractCommand, extractionLabel);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Batch File", ImVec2(100.f, 25.f)))
 		{
 			ImGui::CloseCurrentPopup();
-			CreateUnzipBatchFile(curMap.Folder.string() + "/", curMap.ZipFile.string());
+			const std::string batchFile = CreateUnzipBatchFile(curMap.Folder.string() + "/", curMap.ZipFile.string());
+			RunExternalCommandAsync(batchFile, extractionLabel);
 		}
 		ImGui::SameLine();
 		if (ImGui::Button(EMFStillDoesntWorkText.c_str(), ImVec2(110.f, 25.f)))//"Still doesn't work"
@@ -1781,7 +1705,7 @@ void Pluginx64::renderExtractMapFilesPopup(Map curMap)
 			{
 				std::wstring w_CurrentMapsDir = s2ws(curMap.Folder.string());
 				LPCWSTR L_CurrentMapsDir = w_CurrentMapsDir.c_str();
-				ShellExecute(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT); //open the map directory in file explorer
+				ShellExecuteW(NULL, L"open", L_CurrentMapsDir, NULL, NULL, SW_SHOWDEFAULT); //open the map directory in file explorer
 			}
 			ImGui::SameLine();
 			if (ImGui::Button(CancelText.c_str(), ImVec2(100.f, 25.f)))
@@ -1872,21 +1796,21 @@ void Pluginx64::renderInfoPopup(const char* popupName, const char* label)
 	}
 }
 
-void Pluginx64::renderReleases(RLMAPS_MapResult mapResult)
+void Pluginx64::renderReleases(const RLMAPS_MapResult& mapResult)
 {
 	if (ImGui::BeginPopupModal("Releases", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		for (int releasesIndex = 0; releasesIndex < mapResult.releases.size(); releasesIndex++)
 		{
-			RLMAPS_Release release = mapResult.releases[releasesIndex];
+			const RLMAPS_Release& release = mapResult.releases[releasesIndex];
 
 			if (ImGui::Button(release.tag_name.c_str(), ImVec2(182, 20))) // "Download Map"																								//Map download button
 			{
-				if (RLMAPS_IsDownloadingWorkshop == false && IsRetrievingWorkshopFiles == false && Directory_Or_File_Exists(fs::path(MapsFolderPathBuf)))
-				{
-					std::thread t2(&Pluginx64::RLMAPS_DownloadWorkshop, this, MapsFolderPathBuf, mapResult, release);
-					t2.detach();
-				}
+					if (RLMAPS_IsDownloadingWorkshop == false && IsRetrievingWorkshopFiles == false && Directory_Or_File_Exists(fs::path(MapsFolderPathBuf)))
+					{
+						std::thread t2(&Pluginx64::RLMAPS_DownloadWorkshop, this, MapsFolderPathBuf, mapResult, release);
+						t2.detach();
+					}
 				else
 				{
 					if (!Directory_Or_File_Exists(fs::path(MapsFolderPathBuf)))
@@ -1918,7 +1842,18 @@ void Pluginx64::renderReleases(RLMAPS_MapResult mapResult)
 	}
 }
 
-void Pluginx64::renderDownloadTexturesPopup(std::vector<std::string> missingTextureFiles)
+void Pluginx64::processDownloadTexturesPopup(const std::vector<std::string>& missingTextureFiles)
+{
+	if (DownloadTexturesBool)
+	{
+		ImGui::OpenPopup("DownloadTextures");
+		DownloadTexturesBool = false;
+	}
+
+	renderDownloadTexturesPopup(missingTextureFiles);
+}
+
+void Pluginx64::renderDownloadTexturesPopup(const std::vector<std::string>& missingTextureFiles)
 {
 	if (ImGui::BeginPopupModal("DownloadTextures", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
@@ -2011,6 +1946,8 @@ void Pluginx64::renderDownloadTexturesPopup(std::vector<std::string> missingText
 
 void Pluginx64::renderNewUpdatePopup()
 {
+	double announcementTabMs = 0.0;
+	double changelogTabMs = 0.0;
 	static bool french = false;
 	if (ImGui::BeginPopupModal("New Update", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
@@ -2087,6 +2024,7 @@ void Pluginx64::renderNewUpdatePopup()
 		{
 			if (ImGui::BeginTabItem("Announcement"))
 			{
+				const auto announcementStart = std::chrono::steady_clock::now();
 				ImGui::NewLine();
 
 				ImGui::Checkbox("French", &french);
@@ -2122,10 +2060,12 @@ void Pluginx64::renderNewUpdatePopup()
 				ImGui::NewLine();
 
 				ImGui::EndTabItem();
+				announcementTabMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - announcementStart).count();
 			}
 
 			if (ImGui::BeginTabItem(std::string("Changelog v" + PluginVersion).c_str())) // "Announcement"
 			{
+				const auto changelogStart = std::chrono::steady_clock::now();
 				ImGui::NewLine();
 
 				ImGui::Checkbox("French", &french);
@@ -2175,9 +2115,10 @@ void Pluginx64::renderNewUpdatePopup()
 				ImGui::NewLine();
 
 				ImGui::EndTabItem();
+				changelogTabMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - changelogStart).count();
 			}
-			ImGui::EndTabBar();
-		}
+		ImGui::EndTabBar();
+	}
 
 		
 
@@ -2287,10 +2228,84 @@ void Pluginx64::renderFileExplorer()
 	ImGui::SetNextWindowSize(ImVec2(600.f, 429.f));
 	if (ImGui::BeginPopupModal("Select maps folder", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		static char newFolderName[200] = "";
+		struct ExplorerEntry
+		{
+			std::string name;
+			std::string fullPath;
+		};
 
+		static char newFolderName[200] = "";
 		static char fullPathBuff[256] = "C:/";
-		std::filesystem::path currentPath = fullPathBuff;
+		static std::vector<std::string> cachedDrives;
+		static std::vector<ExplorerEntry> cachedDirectories;
+		static std::filesystem::path cachedPath = std::filesystem::path(fullPathBuff);
+		static bool drivesDirty = true;
+		static bool directoriesDirty = true;
+
+		if (ImGui::IsWindowAppearing())
+		{
+			std::string defaultPath = std::string(MapsFolderPathBuf);
+			if (defaultPath.empty())
+			{
+				defaultPath = "C:/";
+			}
+			strncpy(fullPathBuff, defaultPath.c_str(), IM_ARRAYSIZE(fullPathBuff));
+			fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+			cachedPath = std::filesystem::path(fullPathBuff);
+			drivesDirty = true;
+			directoriesDirty = true;
+		}
+
+		auto refreshDrives = [&]()
+		{
+			cachedDrives = GetDrives();
+			drivesDirty = false;
+		};
+
+		auto refreshDirectories = [&]()
+		{
+			cachedDirectories.clear();
+			try
+			{
+				for (const auto& dir : fs::directory_iterator(cachedPath))
+				{
+					if (!dir.is_directory())
+					{
+						continue;
+					}
+					cachedDirectories.push_back({ dir.path().filename().string(), dir.path().string() });
+				}
+			}
+			catch (const std::exception& ex)
+			{
+				cvarManager->log("error : " + std::string(ex.what()));
+				if (cachedPath.has_parent_path())
+				{
+					cachedPath = cachedPath.parent_path();
+					strncpy(fullPathBuff, cachedPath.string().c_str(), IM_ARRAYSIZE(fullPathBuff));
+					fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+				}
+			}
+			directoriesDirty = false;
+		};
+
+		std::filesystem::path currentPath = std::filesystem::path(fullPathBuff);
+		if (currentPath.empty())
+		{
+			currentPath = "C:/";
+			strncpy(fullPathBuff, currentPath.string().c_str(), IM_ARRAYSIZE(fullPathBuff));
+			fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+		}
+
+		if (drivesDirty)
+		{
+			refreshDrives();
+		}
+		if (directoriesDirty || currentPath != cachedPath)
+		{
+			cachedPath = currentPath;
+			refreshDirectories();
+		}
 
 		ImGui::BeginChild("##fullPath", ImVec2(ImGui::GetContentRegionAvailWidth(), 35.f), true);
 		{
@@ -2298,31 +2313,36 @@ void Pluginx64::renderFileExplorer()
 			ImGui::SetColumnWidth(0, 40.f);
 
 			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3.f);
-			if(ImGui::Selectable("<--"))
+			if (ImGui::Selectable("<--"))
 			{
-				strncpy(fullPathBuff, currentPath.parent_path().string().c_str(), IM_ARRAYSIZE(fullPathBuff));
+				const std::filesystem::path parentPath = cachedPath.parent_path();
+				if (!parentPath.empty() && parentPath != cachedPath)
+				{
+					cachedPath = parentPath;
+					strncpy(fullPathBuff, cachedPath.string().c_str(), IM_ARRAYSIZE(fullPathBuff));
+					fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+					directoriesDirty = true;
+				}
 			}
 
 			ImGui::NextColumn();
 
-			std::vector<std::string> Drives = GetDrives();
-
 			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvailWidth() - 108.f);
-			if(ImGui::BeginCombo("", fullPathBuff))
+			if (ImGui::BeginCombo("", fullPathBuff))
 			{
-				for (auto drive : Drives)
+				for (const auto& drive : cachedDrives)
 				{
-					drive += ":/";
-					if (ImGui::Selectable(drive.c_str()))
+					const std::string driveLabel = drive + ":/";
+					if (ImGui::Selectable(driveLabel.c_str()))
 					{
-						strncpy(fullPathBuff, drive.c_str(), IM_ARRAYSIZE(fullPathBuff));
-						currentPath = fullPathBuff;
+						strncpy(fullPathBuff, driveLabel.c_str(), IM_ARRAYSIZE(fullPathBuff));
+						fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+						cachedPath = std::filesystem::path(fullPathBuff);
+						directoriesDirty = true;
 					}
 				}
 				ImGui::EndCombo();
 			}
-
-			currentPath = fullPathBuff;
 
 			ImGui::SameLine();
 
@@ -2338,7 +2358,8 @@ void Pluginx64::renderFileExplorer()
 				{
 					try
 					{
-						std::filesystem::create_directory(currentPath.string() + "/" + newFolderName);
+						std::filesystem::create_directory(cachedPath.string() + "/" + newFolderName);
+						directoriesDirty = true;
 					}
 					catch (const std::exception& ex) //manage errors when trying to create a folder in an administrator folder
 					{
@@ -2358,28 +2379,19 @@ void Pluginx64::renderFileExplorer()
 
 			ImGui::EndChild();
 		}
-		
+
 		ImGui::BeginChild("##directories", ImVec2(ImGui::GetContentRegionAvailWidth(), ImGui::GetWindowHeight() * 0.75f), true);
 		{
-			try
+			for (const auto& entry : cachedDirectories)
 			{
-				for (const auto& dir : fs::directory_iterator(currentPath))
+				if (ImGui::Selectable(entry.name.c_str()))
 				{
-					if (dir.is_directory())
-					{
-						if (ImGui::Selectable(dir.path().filename().string().c_str()))
-						{
-							strncpy(fullPathBuff, dir.path().string().c_str(), IM_ARRAYSIZE(fullPathBuff));
-						}
-					}
+					strncpy(fullPathBuff, entry.fullPath.c_str(), IM_ARRAYSIZE(fullPathBuff));
+					fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+					cachedPath = std::filesystem::path(fullPathBuff);
+					directoriesDirty = true;
 				}
 			}
-			catch (const std::exception& ex)
-			{
-				cvarManager->log("error : " + std::string(ex.what()));
-				strncpy(fullPathBuff, currentPath.parent_path().string().c_str(), IM_ARRAYSIZE(fullPathBuff));
-			}
-
 			ImGui::EndChild();
 		}
 
@@ -2397,7 +2409,7 @@ void Pluginx64::renderFileExplorer()
 			SaveInCFG();
 			ImGui::CloseCurrentPopup();
 		}
-		
+
 		ImGui::EndPopup();
 	}
 }
@@ -2408,10 +2420,113 @@ void Pluginx64::renderFileExplorerToAddMap(char* filefullPathBuff, std::vector<s
 	ImGui::SetNextWindowSize(ImVec2(600.f, 429.f));
 	if (ImGui::BeginPopupModal("Select map file", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
-		static char newFolderName[200] = "";
+		struct FileEntry
+		{
+			std::string name;
+			std::string fullPath;
+			bool isDirectory;
+		};
 
+		static char newFolderName[200] = "";
 		static char fullPathBuff[256] = "C:/";
-		std::filesystem::path currentPath = fullPathBuff;
+		static std::vector<std::string> cachedDrives;
+		static std::vector<FileEntry> cachedEntries;
+		static std::filesystem::path cachedPath = std::filesystem::path(fullPathBuff);
+		static bool drivesDirty = true;
+		static bool entriesDirty = true;
+		static std::string lastExtensionsKey;
+
+		const auto makeExtensionsKey = [&extensions]()
+		{
+			std::string key;
+			for (const auto& ext : extensions)
+			{
+				key.append(ext);
+				key.push_back(';');
+			}
+			return key;
+		};
+
+		if (ImGui::IsWindowAppearing())
+		{
+			strncpy(fullPathBuff, MapsFolderPathBuf, IM_ARRAYSIZE(fullPathBuff));
+			fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+			if (std::string(fullPathBuff).empty())
+			{
+				strncpy(fullPathBuff, "C:/", IM_ARRAYSIZE(fullPathBuff));
+			}
+			cachedPath = std::filesystem::path(fullPathBuff);
+			drivesDirty = true;
+			entriesDirty = true;
+			lastExtensionsKey.clear();
+		}
+
+		const std::string currentExtensionsKey = makeExtensionsKey();
+		if (currentExtensionsKey != lastExtensionsKey)
+		{
+			entriesDirty = true;
+			lastExtensionsKey = currentExtensionsKey;
+		}
+
+		auto refreshDrives = [&]()
+		{
+			cachedDrives = GetDrives();
+			drivesDirty = false;
+		};
+
+		auto refreshEntries = [&]()
+		{
+			cachedEntries.clear();
+			try
+			{
+				for (const auto& dir : fs::directory_iterator(cachedPath))
+				{
+					FileEntry entry;
+					entry.name = dir.path().filename().string();
+					entry.fullPath = dir.path().string();
+					entry.isDirectory = dir.is_directory();
+					if (!entry.isDirectory)
+					{
+						std::string fileExtension = dir.path().filename().extension().string();
+						const bool allowed = std::find(extensions.begin(), extensions.end(), fileExtension) != extensions.end();
+						if (!allowed)
+						{
+							continue;
+						}
+					}
+					cachedEntries.push_back(std::move(entry));
+				}
+			}
+			catch (const std::exception& ex)
+			{
+				cvarManager->log("error : " + std::string(ex.what()));
+				if (cachedPath.has_parent_path())
+				{
+					cachedPath = cachedPath.parent_path();
+					strncpy(fullPathBuff, cachedPath.string().c_str(), IM_ARRAYSIZE(fullPathBuff));
+					fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+				}
+			}
+			entriesDirty = false;
+		};
+
+		std::filesystem::path currentPath = std::filesystem::path(fullPathBuff);
+		if (currentPath.empty())
+		{
+			currentPath = "C:/";
+			strncpy(fullPathBuff, currentPath.string().c_str(), IM_ARRAYSIZE(fullPathBuff));
+			fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+		}
+
+		if (drivesDirty)
+		{
+			refreshDrives();
+		}
+		if (entriesDirty || currentPath != cachedPath)
+		{
+			cachedPath = currentPath;
+			refreshEntries();
+		}
 
 		ImGui::BeginChild("##fullPath", ImVec2(ImGui::GetContentRegionAvailWidth(), 35.f), true);
 		{
@@ -2421,29 +2536,34 @@ void Pluginx64::renderFileExplorerToAddMap(char* filefullPathBuff, std::vector<s
 			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3.f);
 			if (ImGui::Selectable("<--"))
 			{
-				strncpy(fullPathBuff, currentPath.parent_path().string().c_str(), IM_ARRAYSIZE(fullPathBuff));
+				const std::filesystem::path parentPath = cachedPath.parent_path();
+				if (!parentPath.empty() && parentPath != cachedPath)
+				{
+					cachedPath = parentPath;
+					strncpy(fullPathBuff, cachedPath.string().c_str(), IM_ARRAYSIZE(fullPathBuff));
+					fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+					entriesDirty = true;
+				}
 			}
 
 			ImGui::NextColumn();
 
-			std::vector<std::string> Drives = GetDrives();
-
 			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvailWidth() - 108.f);
 			if (ImGui::BeginCombo("", fullPathBuff))
 			{
-				for (auto drive : Drives)
+				for (const auto& drive : cachedDrives)
 				{
-					drive += ":/";
-					if (ImGui::Selectable(drive.c_str()))
+					const std::string driveLabel = drive + ":/";
+					if (ImGui::Selectable(driveLabel.c_str()))
 					{
-						strncpy(fullPathBuff, drive.c_str(), IM_ARRAYSIZE(fullPathBuff));
-						currentPath = fullPathBuff;
+						strncpy(fullPathBuff, driveLabel.c_str(), IM_ARRAYSIZE(fullPathBuff));
+						fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+						cachedPath = std::filesystem::path(fullPathBuff);
+						entriesDirty = true;
 					}
 				}
 				ImGui::EndCombo();
 			}
-
-			currentPath = fullPathBuff;
 
 			ImGui::SameLine();
 
@@ -2459,9 +2579,10 @@ void Pluginx64::renderFileExplorerToAddMap(char* filefullPathBuff, std::vector<s
 				{
 					try
 					{
-						std::filesystem::create_directory(currentPath.string() + "/" + newFolderName);
+						std::filesystem::create_directory(cachedPath.string() + "/" + newFolderName);
+						entriesDirty = true;
 					}
-					catch (const std::exception& ex) //manage errors when trying to create a folder in an administrator folder
+					catch (const std::exception& ex)
 					{
 						cvarManager->log(ex.what());
 					}
@@ -2482,50 +2603,34 @@ void Pluginx64::renderFileExplorerToAddMap(char* filefullPathBuff, std::vector<s
 
 		ImGui::BeginChild("##directories", ImVec2(ImGui::GetContentRegionAvailWidth(), ImGui::GetWindowHeight() * 0.75f), true);
 		{
-			try
+			for (const auto& entry : cachedEntries)
 			{
-				for (const auto& dir : fs::directory_iterator(currentPath))
+				if (entry.isDirectory)
 				{
-					std::string dirName = dir.path().filename().string();
-					std::string dirPath = dir.path().string();
-
-					if (dir.is_directory())
+					if (ImGui::Selectable(entry.name.c_str()))
 					{
-						if (ImGui::Selectable(dirName.c_str()))
-						{
-							strncpy(fullPathBuff, dirPath.c_str(), IM_ARRAYSIZE(fullPathBuff));
-						}
+						strncpy(fullPathBuff, entry.fullPath.c_str(), IM_ARRAYSIZE(fullPathBuff));
+						fullPathBuff[IM_ARRAYSIZE(fullPathBuff) - 1] = '\0';
+						cachedPath = std::filesystem::path(fullPathBuff);
+						entriesDirty = true;
 					}
-					else
+				}
+				else
+				{
+					const bool isSelected = (std::string(filefullPathBuff) == entry.fullPath);
+					if (ImGui::Selectable(entry.name.c_str(), isSelected))
 					{
-						std::string fileExtension = dir.path().filename().extension().string();
-						auto checkExtensions = [&]() {
-							for (std::string extension : extensions)
-								if (extension == fileExtension)
-									return true;
-							return false;
-						};
-
-						if (checkExtensions())
+						if (isSelected)
 						{
-							bool isSelected = (std::string(filefullPathBuff) == dirPath);
-							if (ImGui::Selectable(dirName.c_str(), isSelected))
-							{
-								if (isSelected)
-									strncpy(filefullPathBuff, "", 256); //reset
-								else
-									strncpy(filefullPathBuff, dirPath.c_str(), 256); //select this file
-							}
+							strncpy(filefullPathBuff, "", 256);
+						}
+						else
+						{
+							strncpy(filefullPathBuff, entry.fullPath.c_str(), 256);
 						}
 					}
 				}
 			}
-			catch (const std::exception& ex)
-			{
-				cvarManager->log("error : " + std::string(ex.what()));
-				strncpy(fullPathBuff, currentPath.parent_path().string().c_str(), IM_ARRAYSIZE(fullPathBuff));
-			}
-
 			ImGui::EndChild();
 		}
 
@@ -2537,8 +2642,9 @@ void Pluginx64::renderFileExplorerToAddMap(char* filefullPathBuff, std::vector<s
 		ImGui::SameLine();
 
 		AlignRightNexIMGUItItem(100.f, 8.f);
-		if (ImGui::Button(SelectText.c_str(), ImVec2(100.f, 30.f))) //"Select"
+		if (ImGui::Button(SelectText.c_str(), ImVec2(100.f, 30.f)))
 		{
+			strncpy(filefullPathBuff, fullPathBuff, 256);
 			ImGui::CloseCurrentPopup();
 		}
 

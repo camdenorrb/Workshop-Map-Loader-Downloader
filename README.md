@@ -50,6 +50,37 @@ You have to :
 
 I've made a tutorial if you are struggling to make it work : [https://www.youtube.com/watch?v=mI2PqkissiQ](https://www.youtube.com/watch?v=mI2PqkissiQ)
 
+## Building with CMake
+
+1. Install the BakkesMod SDK and note the directory that contains the `bakkesmodsdk/include` and `bakkesmodsdk/lib` folders. Export it via `setx BAKKESMOD_SDK_PATH "C:\path\to\bakkesmodsdk"` or pass it to CMake with `-DBAKKESMOD_SDK_PATH=...`.
+2. From a "x64 Native Tools" developer prompt generate the build files (Visual Studio 2022 in this example):
+   ```powershell
+   cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+   ```
+3. Build the Release configuration (BakkesMod loads Release DLLs):
+   ```powershell
+   cmake --build build --config Release
+   ```
+4. The resulting `WorkshopMapLoader.dll` is written to `build/plugins`. The build automatically runs `bakkesmod-patch.exe` (shipped with the SDK) on the DLL so BakkesMod can load it. Copy the patched DLL to `BakkesMod/bakkesmod/plugins/` if you want the game to load it automatically. (If you are building in an environment without a BakkesMod installation—such as CI—pass `-DBAKKESMOD_ENABLE_PATCH=OFF` and patch manually later.)
+
+### CI builds
+
+The GitHub Actions workflow (`.github/workflows/build.yml`) automatically clones the public [BakkesModSDK](https://github.com/bakkesmodorg/BakkesModSDK) repository (which already exposes the required `include/` and `lib/` directories at its root) and runs the same CMake build on every push/PR. Because the runners do not have a full BakkesMod installation, the workflow configures CMake with `-DBAKKESMOD_ENABLE_PATCH=OFF` and uploads the unpatched Release DLL as an artifact; patch it locally before loading it into the game.
+
+## Dev Container (Windows/MSBuild)
+
+The repo also contains a VS Code [Development Container](.devcontainer/) that spins up a Windows-based environment mirroring the GitHub Actions setup (MSBuild + Visual Studio Build Tools). To use it:
+
+1. Install Docker Desktop with Windows container support enabled, VS Code, and the “Dev Containers” extension.
+2. Open this folder in VS Code and choose **Dev Containers: Reopen in Container**.
+3. Inside the container, clone/download the [BakkesMod SDK](https://github.com/bakkesmodorg/BakkesModSDK) into `deps/BakkesModSDK` (or mount an existing copy) so that `deps/BakkesModSDK/wrapper/bakkesmodsdk/include` and `lib` exist.
+4. From a PowerShell terminal inside the container run:
+   ```powershell
+   msbuild Pluginx64\Pluginx64.vcxproj /t:Build /p:Configuration=Release /p:Platform=x64 /p:BakkesModPath="C:\workspaces\Workshop-Map-Loader-Downloader\deps\BakkesModSDK\wrapper"
+   ```
+   Adjust `BakkesModPath` if your SDK lives elsewhere. The patched DLL appears under `build\plugins\`.
+
+Because the container image already includes MSBuild, Ninja, CMake, Git, Python, etc., this workflow matches the CI environment closely and keeps builds consistent across contributors.
 
 ## Bugs/Issues Known
 
