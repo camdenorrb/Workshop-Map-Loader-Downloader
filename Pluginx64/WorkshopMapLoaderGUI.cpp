@@ -124,7 +124,7 @@ void Pluginx64::Render()
 
 	double localizationBlockMs = lastRenderLocalizationMs;
 	lastRenderLocalizationMs = 0.0;
-	const auto& missingTexturesFiles = GetMissingTexturesSnapshot();
+	const auto missingTexturesFiles = GetMissingTexturesSnapshot();
 
 
 	if (!HasSeeNewUpdateAlert)
@@ -272,13 +272,6 @@ void Pluginx64::Render()
 			ImGui::EndMenu();
 		}
 
-		if (DownloadTexturesBool) //I know this is not good but It works, so I don't care
-		{
-			ImGui::OpenPopup("DownloadTextures");
-		}
-		renderDownloadTexturesPopup(missingTexturesFiles);
-
-
 		if (ImGui::Selectable(LastUpdateText.c_str(), false, 0, ImGui::CalcTextSize(LastUpdateText.c_str())))
 		{
 			HasSeeNewUpdateAlert = false;
@@ -380,13 +373,11 @@ void Pluginx64::Render()
 					RefreshMapsFunct(MapsFolderPathBuf);
 					if (missingTexturesFiles.size() > 0 && dontAsk == 0)
 					{
-						ImGui::OpenPopup("DownloadTextures");
+						DownloadTexturesBool = true;
 					}
 				}
 			}
 			renderInfoPopup("Exists?", DirNotExistText.c_str());
-
-			renderDownloadTexturesPopup(missingTexturesFiles);
 
 			ImGui::SameLine();
 
@@ -610,6 +601,8 @@ void Pluginx64::Render()
 		ImGui::EndTabBar();
 		tabBarMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tabBarStart).count();
 	}
+
+	processDownloadTexturesPopup(missingTexturesFiles);
 
 	ImGui::End();
 
@@ -1847,6 +1840,17 @@ void Pluginx64::renderReleases(const RLMAPS_MapResult& mapResult)
 		}
 		ImGui::EndPopup();
 	}
+}
+
+void Pluginx64::processDownloadTexturesPopup(const std::vector<std::string>& missingTextureFiles)
+{
+	if (DownloadTexturesBool)
+	{
+		ImGui::OpenPopup("DownloadTextures");
+		DownloadTexturesBool = false;
+	}
+
+	renderDownloadTexturesPopup(missingTextureFiles);
 }
 
 void Pluginx64::renderDownloadTexturesPopup(const std::vector<std::string>& missingTextureFiles)

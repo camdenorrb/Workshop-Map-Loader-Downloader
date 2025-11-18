@@ -5,6 +5,8 @@
 #include "bakkesmod/plugin/PluginSettingsWindow.h"
 
 #include "Gamepad.h"
+#include "services/LocalizationService.h"
+#include "services/TextureInventory.h"
 #include <chrono>
 
 //#include <WinUser.h>
@@ -111,11 +113,8 @@ public:
 	double lastRenderSearchTabMs = 0.0;
 	double lastRenderAnnouncementTabMs = 0.0;
 	double lastRenderChangelogTabMs = 0.0;
-	bool localizationInitialized = false;
-	bool lastLocalizationFrench = false;
-	std::vector<std::string> cachedMissingTextures;
-	std::chrono::steady_clock::time_point nextMissingTexturesCheck{};
-	bool missingTexturesCacheDirty = true;
+	LocalizationService localizationService;
+	TextureInventory textureInventory;
 	int selectedButton = 0;
 
 	bool UseController = false;
@@ -126,17 +125,11 @@ public:
 
 
 	//Textures
-	std::vector<std::string> WorkshopTexturesFilesList =
-	{
-		"EditorLandscapeResources.upk", "EditorMaterials.upk", "EditorMeshes.upk", "EditorResources.upk", "Engine_MI_Shaders.upk", "EngineBuildings.upk", "EngineDebugMaterials.upk",
-		"EngineMaterials.upk", "EngineResources.upk", "EngineVolumetrics.upk", "MapTemplateIndex.upk", "MapTemplates.upk", "mods.upk", "NodeBuddies.upk"
-	};
 	bool IsDownloading_WorkshopTextures;
-	std::vector<std::string> CheckExist_TexturesFiles();
 	void DownloadWorkshopTextures();
 	int Download_Textrures_Progress;
 	int DownloadTextrures_ProgressDisplayed;
-	const std::vector<std::string>& GetMissingTexturesSnapshot();
+	std::vector<std::string> GetMissingTexturesSnapshot();
 	void InvalidateMissingTexturesCache();
 	void UpdateLocalizationTexts(bool french);
 	void ApplyLocalization(bool french);
@@ -287,6 +280,7 @@ public:
 	void renderAcceptDownload();
 	void renderDownloadFailedPopup();
 	void renderDownloadTexturesPopup(const std::vector<std::string>& missingTextureFiles);
+	void processDownloadTexturesPopup(const std::vector<std::string>& missingTextureFiles);
 
 
 	bool AddedMapSccuessfully = false;

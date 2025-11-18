@@ -27,6 +27,7 @@ void Pluginx64::onLoad()
 
 	std::string RLWin64_Path = std::filesystem::current_path().string();
 	RLCookedPCConsole_Path = RLWin64_Path.substr(0, RLWin64_Path.length() - 14) + "TAGame\\CookedPCConsole";
+	textureInventory.SetCookedDirectory(RLCookedPCConsole_Path);
 
 	std::string Data_WorkshopMapLoader_Path = BakkesmodPath + "data\\WorkshopMapLoader\\";
 
@@ -317,7 +318,7 @@ void Pluginx64::UpdateLocalizationTexts(bool french)
 
 void Pluginx64::ApplyLocalization(bool french)
 {
-	if (localizationInitialized && lastLocalizationFrench == french)
+	if (!localizationService.ShouldApply(french))
 	{
 		lastRenderLocalizationMs = 0.0;
 		return;
@@ -325,8 +326,7 @@ void Pluginx64::ApplyLocalization(bool french)
 
 	const auto localizationStart = std::chrono::steady_clock::now();
 	UpdateLocalizationTexts(french);
-	localizationInitialized = true;
-	lastLocalizationFrench = french;
+	localizationService.MarkApplied(french);
 	lastRenderLocalizationMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - localizationStart).count();
 }
 
@@ -1165,35 +1165,14 @@ void Pluginx64::DownloadWorkshopTextures()
 	InvalidateMissingTexturesCache();
 }
 
-std::vector<std::string> Pluginx64::CheckExist_TexturesFiles()
+std::vector<std::string> Pluginx64::GetMissingTexturesSnapshot()
 {
-	std::vector<std::string> missingFiles;
-	for (auto textureFile : WorkshopTexturesFilesList)
-	{
-		if (!Directory_Or_File_Exists(RLCookedPCConsole_Path.string() + "\\" + textureFile))
-		{
-			missingFiles.push_back(textureFile);
-		}
-	}
-
-	return missingFiles;
-}
-
-const std::vector<std::string>& Pluginx64::GetMissingTexturesSnapshot()
-{
-	const auto now = std::chrono::steady_clock::now();
-	if (missingTexturesCacheDirty || nextMissingTexturesCheck.time_since_epoch().count() == 0 || now >= nextMissingTexturesCheck)
-	{
-		cachedMissingTextures = CheckExist_TexturesFiles();
-		missingTexturesCacheDirty = false;
-		nextMissingTexturesCheck = now + std::chrono::seconds(2);
-	}
-	return cachedMissingTextures;
+	return textureInventory.GetMissingTexturesSnapshot();
 }
 
 void Pluginx64::InvalidateMissingTexturesCache()
 {
-	missingTexturesCacheDirty = true;
+	textureInventory.InvalidateCache();
 }
 
 
@@ -1317,10 +1296,9 @@ void Pluginx64::renameFileToUPK(std::filesystem::path filePath)
 	if (!EnableAntiFreezeFix)
 		return;
 
-	for (std::string texture : WorkshopTexturesFilesList)
+	if (textureInventory.IsManagedTexture(filePath))
 	{
-		if (filePath.filename().string() == texture)
-			return;
+		return;
 	}
 
 	std::string UDKPath = UdkInDirectory(filePath.string());

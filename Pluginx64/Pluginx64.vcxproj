@@ -173,6 +173,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Gamepad.h" />
+    <ClInclude Include="services\LocalizationService.h" />
+    <ClInclude Include="services\TextureInventory.h" />
     <ClInclude Include="IMGUI\imconfig.h" />
     <ClInclude Include="IMGUI\imgui.h" />
     <ClInclude Include="IMGUI\imguivariouscontrols.h" />
@@ -191,6 +193,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Gamepad.cpp" />
+    <ClCompile Include="services\LocalizationService.cpp" />
+    <ClCompile Include="services\TextureInventory.cpp" />
     <ClCompile Include="IMGUI\imgui.cpp" />
     <ClCompile Include="IMGUI\imguivariouscontrols.cpp" />
     <ClCompile Include="IMGUI\imgui_additions.cpp" />
